@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DISCOVER MONTHLY - DEMO</title>
+  <style>
+    @font-face {
+      font-family: 'Iosevka Nerd Font Mono';
+      src: url('public/fonts/IosevkaTermNerdFontMono-Regular.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --fg: #ffffff;
+      --bg: #000000;
+      --dim: #cccccc;
+      --border: #666666;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Iosevka Nerd Font Mono', 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: bold;
+      line-height: 1.4;
+      padding: 0;
+      margin: 0;
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    .header {
+      padding: 15px 20px 15px;
+      border-bottom: 1px dashed var(--border);
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .header-logo {
+      width: 130px;
+      height: 43px;
+      background: var(--fg);
+      flex-shrink: 0;
+    }
+
+    .header-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .header-hypercube {
+      width: 40px;
+      height: 40px;
+      font-size: 5px;
+      line-height: 1.2;
+      white-space: pre;
+      font-family: monospace;
+      font-weight: bold;
+      color: #ffffff;
+      flex-shrink: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-hypercube.active {
+      display: flex;
+    }
+
+    .title {
+      font-size: 14px;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+    }
+
+    .stats {
+      font-size: 11px;
+      color: var(--dim);
+      display: flex;
+      gap: 20px;
+    }
+
+    .stat {
+      display: flex;
+      gap: 8px;
+    }
+
+    .stat-value {
+      color: var(--fg);
+    }
+
+    /* Layout */
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      height: calc(100vh - 73px);
+    }
+
+    /* Main Content */
+    .content {
+      padding: 20px;
+      overflow-y: auto;
+      border-right: 1px dashed var(--border);
+    }
+
+    .welcome {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .hypercube-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      font-size: 14px;
+      line-height: 1.2;
+      white-space: pre;
+      font-family: monospace;
+      color: var(--fg);
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .welcome-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: var(--fg);
+      font-size: 11px;
+      line-height: 1.8;
+      background: var(--bg);
+      border: 1px dashed var(--border);
+      padding: 20px 30px;
+      z-index: 10;
+    }
+
+    .content-header {
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed var(--dim);
+    }
+
+    .content-title {
+      font-size: 13px;
+      margin-bottom: 5px;
+      letter-spacing: 2px;
+    }
+
+    .content-meta {
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    /* Sidebar - Playlist Menu */
+    .sidebar {
+      padding: 20px;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      color: var(--dim);
+      margin-bottom: 15px;
+      letter-spacing: 2px;
+    }
+
+    .playlist-menu {
+      list-style: none;
+    }
+
+    .year-group {
+      margin-bottom: 15px;
+    }
+
+    .year-header {
+      padding: 6px 0;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--fg);
+      transition: color 0.2s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .year-header:hover {
+      color: var(--dim);
+    }
+
+    .year-toggle {
+      font-size: 10px;
+      margin-right: 5px;
+    }
+
+    .year-playlists {
+      margin-left: 15px;
+      margin-top: 5px;
+      display: none;
+    }
+
+    .year-playlists.expanded {
+      display: block;
+    }
+
+    .playlist-item {
+      padding: 6px 0;
+      cursor: pointer;
+      font-size: 11px;
+      color: var(--dim);
+      transition: color 0.2s;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .playlist-item:hover,
+    .playlist-item.active {
+      color: var(--fg);
+    }
+
+    .playlist-item .count {
+      font-size: 10px;
+      color: var(--dim);
+    }
+
+    .track-list {
+      font-size: 12px;
+    }
+
+    .track {
+      padding: 10px 0;
+      display: grid;
+      grid-template-columns: 30px 50px 1fr 100px;
+      gap: 15px;
+      border-bottom: 1px dashed var(--dim);
+      transition: all 0.2s;
+    }
+
+    .track:hover {
+      color: var(--fg);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .track-num {
+      color: var(--dim);
+      text-align: right;
+    }
+
+    .track-artwork {
+      width: 50px;
+      height: 50px;
+      background: var(--dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      color: var(--bg);
+    }
+
+    .track-artwork img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .track-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .track-title {
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-artist {
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    .track-links {
+      display: flex;
+      gap: 8px;
+      font-size: 11px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .track-links a {
+      color: var(--dim);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .track-links a:hover {
+      color: var(--fg);
+    }
+
+    .track-links .sep {
+      color: var(--dim);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--dim);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--fg);
+    }
+
+    /* Scanline effect */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+      z-index: 9999;
+      opacity: 0.4;
+    }
+
+    /* Mobile Playlist Accordion */
+    .mobile-playlists {
+      display: none;
+      border-bottom: 1px dashed var(--border);
+      background: var(--bg);
+    }
+
+    .mobile-playlists-toggle {
+      padding: 12px 20px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--dim);
+      user-select: none;
+    }
+
+    .mobile-playlists-toggle:hover {
+      color: var(--fg);
+    }
+
+    .mobile-playlists-toggle .arrow {
+      transition: transform 0.3s;
+    }
+
+    .mobile-playlists-toggle.active .arrow {
+      transform: rotate(90deg);
+    }
+
+    .mobile-playlists-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .mobile-playlists-content.expanded {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .mobile-playlists-content #mobilePlaylistMenu {
+      padding: 0 20px 20px 20px;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        font-size: 11px;
+      }
+
+      /* Header adjustments */
+      .header {
+        padding: 10px 15px;
+      }
+
+      .header-logo {
+        width: 80px;
+        height: 26px;
+      }
+
+      .title {
+        font-size: 12px;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+      }
+
+      .stats {
+        font-size: 10px;
+        gap: 10px;
+      }
+
+      .header-hypercube {
+        width: 30px;
+        height: 30px;
+        font-size: 4px;
+      }
+
+      /* Show mobile playlists section */
+      .mobile-playlists {
+        display: block;
+      }
+
+      .container {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: calc(100vh - 150px);
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .content {
+        border-right: none;
+        height: auto;
+      }
+
+      .track {
+        grid-template-columns: 25px 40px 1fr;
+        gap: 10px;
+      }
+
+      .track-links {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+        padding-top: 5px;
+      }
+
+      .track-artwork {
+        width: 40px;
+        height: 40px;
+      }
+
+      /* Hypercube mobile - smaller to fit */
+      .hypercube-container {
+        font-size: 8px;
+      }
+
+      .welcome {
+        padding: 20px;
+      }
+
+      /* Welcome text mobile */
+      .welcome-text {
+        font-size: 10px;
+        padding: 15px 20px;
+        max-width: 90%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo"></div>
+    <div class="header-content">
+      <div class="title">DISCOVER MONTHLY</div>
+      <div class="stats">
+        <div class="stat">
+          <span>PLAYLISTS:</span>
+          <span class="stat-value">6</span>
+        </div>
+        <div class="stat">
+          <span>TRACKS:</span>
+          <span class="stat-value">80</span>
+        </div>
+        <div class="stat">
+          <span>UPDATED:</span>
+          <span class="stat-value">2024.12.02</span>
+        </div>
+      </div>
+    </div>
+    <div class="header-hypercube" id="headerHypercube"></div>
+  </div>
+
+  <!-- Mobile Playlists Section -->
+  <div class="mobile-playlists">
+    <div class="mobile-playlists-toggle" id="mobilePlsToggle">
+      <span>PLAYLISTS</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div class="mobile-playlists-content" id="mobilePlsContent">
+      <div id="mobilePlaylistMenu" class="playlist-menu"></div>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="container">
+    <!-- Content Area -->
+    <div class="content" id="content">
+      <!-- Welcome State with Hypercube -->
+      <div class="welcome">
+        <div class="hypercube-container" id="hypercube"></div>
+        <div class="welcome-text">
+          SELECT A PLAYLIST FROM THE MENU →<br>
+          EXPAND YEAR TO VIEW PLAYLISTS<br>
+          CLICK TO VIEW TRACKS
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar - Playlist Menu -->
+    <div class="sidebar">
+      <div class="sidebar-title">PLAYLISTS</div>
+      <div class="playlist-menu" id="playlistMenu">
+        <!-- 2024 -->
+        <div class="year-group">
+          <div class="year-header" data-year="2024">
+            <span><span class="year-toggle">▶</span>2024</span>
+            <span class="count">62</span>
+          </div>
+          <div class="year-playlists" data-year="2024">
+            <div class="playlist-item" data-id="2024.11">
+              <span>2024.11</span>
+              <span class="count">50</span>
+            </div>
+            <div class="playlist-item" data-id="2024.10">
+              <span>2024.10</span>
+              <span class="count">6</span>
+            </div>
+            <div class="playlist-item" data-id="2024.09">
+              <span>2024.09</span>
+              <span class="count">6</span>
+            </div>
+          </div>
+        </div>
+        <!-- 2023 -->
+        <div class="year-group">
+          <div class="year-header" data-year="2023">
+            <span><span class="year-toggle">▶</span>2023</span>
+            <span class="count">12</span>
+          </div>
+          <div class="year-playlists" data-year="2023">
+            <div class="playlist-item" data-id="2023.12">
+              <span>2023.12</span>
+              <span class="count">6</span>
+            </div>
+            <div class="playlist-item" data-id="2023.06">
+              <span>2023.06</span>
+              <span class="count">6</span>
+            </div>
+          </div>
+        </div>
+        <!-- 2020 -->
+        <div class="year-group">
+          <div class="year-header" data-year="2020">
+            <span><span class="year-toggle">▶</span>2020</span>
+            <span class="count">6</span>
+          </div>
+          <div class="year-playlists" data-year="2020">
+            <div class="playlist-item" data-id="2020.01">
+              <span>2020.01</span>
+              <span class="count">6</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Mock data
+    const playlists = {
+      "2024.11": {
+        name: "2024.11",
+        tracks: [
+          { num: 1, title: "Espresso", artist: "Sabrina Carpenter", duration: "2:55", apple: "#", spotify: "#", youtube: "#" },
+          { num: 2, title: "Birds of a Feather", artist: "Billie Eilish", duration: "3:30", apple: "#", spotify: "#", youtube: "#" },
+          { num: 3, title: "Good Luck, Babe!", artist: "Chappell Roan", duration: "3:38", apple: "#", spotify: "#", youtube: "#" },
+          { num: 4, title: "Not Like Us", artist: "Kendrick Lamar", duration: "4:34", apple: "#", spotify: "#", youtube: "#" },
+          { num: 5, title: "Beautiful Things", artist: "Benson Boone", duration: "3:00", apple: "#", spotify: "#", youtube: "#" },
+          { num: 6, title: "Please Please Please", artist: "Sabrina Carpenter", duration: "3:06", apple: "#", spotify: "#", youtube: "#" },
+          { num: 7, title: "Vampire", artist: "Olivia Rodrigo", duration: "3:39", apple: "#", spotify: "#", youtube: "#" },
+          { num: 8, title: "Anti-Hero", artist: "Taylor Swift", duration: "3:20", apple: "#", spotify: "#", youtube: "#" },
+          { num: 9, title: "Flowers", artist: "Miley Cyrus", duration: "3:20", apple: "#", spotify: "#", youtube: "#" },
+          { num: 10, title: "Snooze", artist: "SZA", duration: "3:21", apple: "#", spotify: "#", youtube: "#" },
+          { num: 11, title: "Cruel Summer", artist: "Taylor Swift", duration: "2:58", apple: "#", spotify: "#", youtube: "#" },
+          { num: 12, title: "Paint The Town Red", artist: "Doja Cat", duration: "3:31", apple: "#", spotify: "#", youtube: "#" },
+          { num: 13, title: "Greedy", artist: "Tate McRae", duration: "2:14", apple: "#", spotify: "#", youtube: "#" },
+          { num: 14, title: "Water", artist: "Tyla", duration: "3:20", apple: "#", spotify: "#", youtube: "#" },
+          { num: 15, title: "Seven", artist: "Jungkook feat. Latto", duration: "3:04", apple: "#", spotify: "#", youtube: "#" },
+          { num: 16, title: "As It Was", artist: "Harry Styles", duration: "2:47", apple: "#", spotify: "#", youtube: "#" },
+          { num: 17, title: "Heat Waves", artist: "Glass Animals", duration: "3:58", apple: "#", spotify: "#", youtube: "#" },
+          { num: 18, title: "Stay", artist: "The Kid LAROI & Justin Bieber", duration: "2:21", apple: "#", spotify: "#", youtube: "#" },
+          { num: 19, title: "Ghost", artist: "Justin Bieber", duration: "2:33", apple: "#", spotify: "#", youtube: "#" },
+          { num: 20, title: "Shivers", artist: "Ed Sheeran", duration: "3:27", apple: "#", spotify: "#", youtube: "#" },
+          { num: 21, title: "Easy On Me", artist: "Adele", duration: "3:44", apple: "#", spotify: "#", youtube: "#" },
+          { num: 22, title: "MONTERO", artist: "Lil Nas X", duration: "2:17", apple: "#", spotify: "#", youtube: "#" },
+          { num: 23, title: "good 4 u", artist: "Olivia Rodrigo", duration: "2:58", apple: "#", spotify: "#", youtube: "#" },
+          { num: 24, title: "Levitating", artist: "Dua Lipa", duration: "3:23", apple: "#", spotify: "#", youtube: "#" },
+          { num: 25, title: "Save Your Tears", artist: "The Weeknd", duration: "3:35", apple: "#", spotify: "#", youtube: "#" },
+          { num: 26, title: "Peaches", artist: "Justin Bieber feat. Daniel Caesar & Giveon", duration: "3:18", apple: "#", spotify: "#", youtube: "#" },
+          { num: 27, title: "Positions", artist: "Ariana Grande", duration: "2:52", apple: "#", spotify: "#", youtube: "#" },
+          { num: 28, title: "Watermelon Sugar", artist: "Harry Styles", duration: "2:54", apple: "#", spotify: "#", youtube: "#" },
+          { num: 29, title: "Circles", artist: "Post Malone", duration: "3:35", apple: "#", spotify: "#", youtube: "#" },
+          { num: 30, title: "Memories", artist: "Maroon 5", duration: "3:09", apple: "#", spotify: "#", youtube: "#" },
+          { num: 31, title: "Senorita", artist: "Shawn Mendes & Camila Cabello", duration: "3:11", apple: "#", spotify: "#", youtube: "#" },
+          { num: 32, title: "Sunflower", artist: "Post Malone & Swae Lee", duration: "2:38", apple: "#", spotify: "#", youtube: "#" },
+          { num: 33, title: "Bad Guy", artist: "Billie Eilish", duration: "3:14", apple: "#", spotify: "#", youtube: "#" },
+          { num: 34, title: "Old Town Road", artist: "Lil Nas X feat. Billy Ray Cyrus", duration: "2:37", apple: "#", spotify: "#", youtube: "#" },
+          { num: 35, title: "Someone You Loved", artist: "Lewis Capaldi", duration: "3:02", apple: "#", spotify: "#", youtube: "#" },
+          { num: 36, title: "7 rings", artist: "Ariana Grande", duration: "2:59", apple: "#", spotify: "#", youtube: "#" },
+          { num: 37, title: "Shallow", artist: "Lady Gaga & Bradley Cooper", duration: "3:35", apple: "#", spotify: "#", youtube: "#" },
+          { num: 38, title: "Havana", artist: "Camila Cabello feat. Young Thug", duration: "3:37", apple: "#", spotify: "#", youtube: "#" },
+          { num: 39, title: "Perfect", artist: "Ed Sheeran", duration: "4:23", apple: "#", spotify: "#", youtube: "#" },
+          { num: 40, title: "Shape of You", artist: "Ed Sheeran", duration: "3:53", apple: "#", spotify: "#", youtube: "#" },
+          { num: 41, title: "Closer", artist: "The Chainsmokers feat. Halsey", duration: "4:04", apple: "#", spotify: "#", youtube: "#" },
+          { num: 42, title: "Starboy", artist: "The Weeknd feat. Daft Punk", duration: "3:50", apple: "#", spotify: "#", youtube: "#" },
+          { num: 43, title: "One Dance", artist: "Drake feat. Wizkid & Kyla", duration: "2:53", apple: "#", spotify: "#", youtube: "#" },
+          { num: 44, title: "Love Yourself", artist: "Justin Bieber", duration: "3:53", apple: "#", spotify: "#", youtube: "#" },
+          { num: 45, title: "Sorry", artist: "Justin Bieber", duration: "3:20", apple: "#", spotify: "#", youtube: "#" },
+          { num: 46, title: "Uptown Funk", artist: "Mark Ronson feat. Bruno Mars", duration: "4:29", apple: "#", spotify: "#", youtube: "#" },
+          { num: 47, title: "Thinking Out Loud", artist: "Ed Sheeran", duration: "4:41", apple: "#", spotify: "#", youtube: "#" },
+          { num: 48, title: "All of Me", artist: "John Legend", duration: "4:29", apple: "#", spotify: "#", youtube: "#" },
+          { num: 49, title: "Happy", artist: "Pharrell Williams", duration: "3:53", apple: "#", spotify: "#", youtube: "#" },
+          { num: 50, title: "Get Lucky", artist: "Daft Punk feat. Pharrell Williams", duration: "4:08", apple: "#", spotify: "#", youtube: "#" }
+        ]
+      },
+      "2024.10": {
+        name: "2024.10",
+        tracks: [
+          { num: 1, title: "APT.", artist: "ROSÉ & Bruno Mars", duration: "2:49", apple: "#", spotify: "#", youtube: "#" },
+          { num: 2, title: "Die With A Smile", artist: "Lady Gaga & Bruno Mars", duration: "4:11", apple: "#", spotify: "#", youtube: "#" },
+          { num: 3, title: "Taste", artist: "Sabrina Carpenter", duration: "2:37", apple: "#", spotify: "#", youtube: "#" },
+          { num: 4, title: "I Can Do It With a Broken Heart", artist: "Taylor Swift", duration: "3:38", apple: "#", spotify: "#" },
+          { num: 5, title: "Pink Pony Club", artist: "Chappell Roan", duration: "4:22", apple: "#", youtube: "#" },
+          { num: 6, title: "Lunch", artist: "Billie Eilish", duration: "2:59", apple: "#", spotify: "#", youtube: "#" }
+        ]
+      },
+      "2024.09": {
+        name: "2024.09",
+        tracks: [
+          { num: 1, title: "WILDFLOWER", artist: "Billie Eilish", duration: "4:21", apple: "#", spotify: "#", youtube: "#" },
+          { num: 2, title: "Cruel Summer", artist: "Taylor Swift", duration: "2:58", apple: "#", spotify: "#", youtube: "#" },
+          { num: 3, title: "Please Please Please", artist: "Sabrina Carpenter", duration: "3:06", apple: "#", spotify: "#", youtube: "#" },
+          { num: 4, title: "Too Sweet", artist: "Hozier", duration: "4:11", apple: "#", spotify: "#", youtube: "#" },
+          { num: 5, title: "Stick Season", artist: "Noah Kahan", duration: "3:01", apple: "#", spotify: "#", youtube: "#" },
+          { num: 6, title: "we can't be friends", artist: "Ariana Grande", duration: "4:24", apple: "#", spotify: "#", youtube: "#" }
+        ]
+      },
+      "2023.12": {
+        name: "2023.12",
+        tracks: [
+          { num: 1, title: "Paint The Town Red", artist: "Doja Cat", duration: "3:31", apple: "#", spotify: "#", youtube: "#" },
+          { num: 2, title: "Vampire", artist: "Olivia Rodrigo", duration: "3:39", apple: "#", spotify: "#", youtube: "#" },
+          { num: 3, title: "Anti-Hero", artist: "Taylor Swift", duration: "3:20", apple: "#", spotify: "#", youtube: "#" },
+          { num: 4, title: "Snooze", artist: "SZA", duration: "3:21", apple: "#", spotify: "#", youtube: "#" },
+          { num: 5, title: "Flowers", artist: "Miley Cyrus", duration: "3:20", apple: "#", spotify: "#", youtube: "#" },
+          { num: 6, title: "Get Lucky", artist: "Daft Punk feat. Pharrell Williams", duration: "4:08", apple: "#", spotify: "#", youtube: "#" }
+        ]
+      },
+      "2023.06": {
+        name: "2023.06",
+        tracks: [
+          { num: 1, title: "Blinding Lights", artist: "The Weeknd", duration: "3:20", apple: "#", spotify: "#", youtube: "#" },
+          { num: 2, title: "Levitating", artist: "Dua Lipa", duration: "3:23", apple: "#", spotify: "#", youtube: "#" },
+          { num: 3, title: "Positions", artist: "Ariana Grande", duration: "2:52", apple: "#", spotify: "#", youtube: "#" },
+          { num: 4, title: "Watermelon Sugar", artist: "Harry Styles", duration: "2:54", apple: "#", spotify: "#", youtube: "#" },
+          { num: 5, title: "Peaches", artist: "Justin Bieber", duration: "3:18", apple: "#", spotify: "#", youtube: "#" },
+          { num: 6, title: "Save Your Tears", artist: "The Weeknd", duration: "3:35", apple: "#", spotify: "#", youtube: "#" }
+        ]
+      },
+      "2020.01": {
+        name: "2020.01",
+        tracks: [
+          { num: 1, title: "Blinding Lights", artist: "The Weeknd", duration: "3:20", apple: "#", spotify: "#", youtube: "#" },
+          { num: 2, title: "Don't Start Now", artist: "Dua Lipa", duration: "3:03", apple: "#", spotify: "#", youtube: "#" },
+          { num: 3, title: "Circles", artist: "Post Malone", duration: "3:35", apple: "#", spotify: "#", youtube: "#" },
+          { num: 4, title: "everything i wanted", artist: "Billie Eilish", duration: "4:05", apple: "#", spotify: "#", youtube: "#" },
+          { num: 5, title: "Memories", artist: "Maroon 5", duration: "3:09", apple: "#", spotify: "#", youtube: "#" },
+          { num: 6, title: "Adore You", artist: "Harry Styles", duration: "3:27", apple: "#", spotify: "#", youtube: "#" }
+        ]
+      }
+    };
+
+    // Hypercube animation
+    function animateHypercube() {
+      const container = document.getElementById('hypercube');
+      if (!container) return;
+      
+      let angle = 0;
+      let width, height, size, centerX, centerY;
+      
+      function updateDimensions() {
+        const rect = container.getBoundingClientRect();
+        // Calculate canvas size based on container dimensions
+        // Using computed font size to calculate character dimensions
+        const computedStyle = window.getComputedStyle(container);
+        const fontSize = parseFloat(computedStyle.fontSize);
+        const charWidth = fontSize * 0.6; // Monospace character width
+        const lineHeight = fontSize * 1.2; // Line height from CSS
+        
+        width = Math.floor(rect.width / charWidth);
+        height = Math.floor(rect.height / lineHeight);
+        centerX = Math.floor(width / 2);
+        centerY = Math.floor(height / 2);
+        // Size scales with available space, reduced to leave margin for rotation
+        size = Math.min(width, height * 2) / 8; // Changed from /6 to /8 for more margin
+      }
+      
+      updateDimensions();
+      window.addEventListener('resize', updateDimensions);
+      
+      function drawHypercube() {
+        angle += 0.02;
+        
+        const vertices4D = [
+          [-1,-1,-1,-1], [1,-1,-1,-1], [-1,1,-1,-1], [1,1,-1,-1],
+          [-1,-1,1,-1], [1,-1,1,-1], [-1,1,1,-1], [1,1,1,-1],
+          [-1,-1,-1,1], [1,-1,-1,1], [-1,1,-1,1], [1,1,-1,1],
+          [-1,-1,1,1], [1,-1,1,1], [-1,1,1,1], [1,1,1,1]
+        ];
+        
+        const vertices2D = vertices4D.map(v => {
+          const x = v[0] * Math.cos(angle) - v[3] * Math.sin(angle);
+          const y = v[1];
+          const z = v[2] * Math.cos(angle * 0.7) - v[1] * Math.sin(angle * 0.7);
+          const w = v[0] * Math.sin(angle) + v[3] * Math.cos(angle);
+          
+          const distance4D = 3;
+          const scale3D = distance4D / (distance4D + w);
+          const x3D = x * scale3D;
+          const y3D = y * scale3D;
+          const z3D = z * scale3D;
+          
+          const distance3D = 5;
+          const scale2D = distance3D / (distance3D + z3D);
+          const x2D = x3D * scale2D * size + centerX;
+          const y2D = y3D * scale2D * size * 0.5 + centerY;
+          
+          return [Math.round(x2D), Math.round(y2D)];
+        });
+        
+        const canvas = Array(height).fill().map(() => Array(width).fill(' '));
+        
+        const edges = [
+          [0,1],[1,3],[3,2],[2,0], [4,5],[5,7],[7,6],[6,4], [0,4],[1,5],[2,6],[3,7],
+          [8,9],[9,11],[11,10],[10,8], [12,13],[13,15],[15,14],[14,12], [8,12],[9,13],[10,14],[11,15],
+          [0,8],[1,9],[2,10],[3,11], [4,12],[5,13],[6,14],[7,15]
+        ];
+        
+        edges.forEach(([i, j]) => {
+          const [x1, y1] = vertices2D[i];
+          const [x2, y2] = vertices2D[j];
+          drawLine(canvas, x1, y1, x2, y2);
+        });
+        
+        vertices2D.forEach(([x, y]) => {
+          if (y >= 0 && y < height && x >= 0 && x < width) {
+            canvas[y][x] = '●';
+          }
+        });
+        
+        container.textContent = canvas.map(row => row.join('')).join('\n');
+      }
+      
+      function drawLine(canvas, x1, y1, x2, y2) {
+        const dx = Math.abs(x2 - x1);
+        const dy = Math.abs(y2 - y1);
+        const sx = x1 < x2 ? 1 : -1;
+        const sy = y1 < y2 ? 1 : -1;
+        let err = dx - dy;
+        
+        let x = x1, y = y1;
+        const char = '·';
+        
+        while (true) {
+          if (y >= 0 && y < canvas.length && x >= 0 && x < canvas[0].length) {
+            if (canvas[y][x] === ' ') canvas[y][x] = char;
+          }
+          
+          if (x === x2 && y === y2) break;
+          const e2 = 2 * err;
+          if (e2 > -dy) { err -= dy; x += sx; }
+          if (e2 < dx) { err += dx; y += sy; }
+        }
+      }
+      
+      setInterval(drawHypercube, 50);
+    }
+
+    // Header wave animation
+    function animateHeaderHypercube() {
+      const container = document.getElementById('headerHypercube');
+      if (!container) return;
+      
+      let offset = 0;
+      const width = 8;
+      const height = 7;
+      
+      function drawWave() {
+        offset += 0.15;
+        
+        const canvas = Array(height).fill().map(() => Array(width).fill(' '));
+        
+        // Draw sine wave
+        for (let x = 0; x < width; x++) {
+          // Calculate sine wave with scrolling offset
+          const angle = (x / width) * Math.PI * 2 + offset;
+          const sine = Math.sin(angle);
+          
+          // Map sine (-1 to 1) to canvas height
+          const y = Math.round((sine + 1) * (height - 1) / 2);
+          
+          // Draw dot at position
+          if (y >= 0 && y < height) {
+            canvas[y][x] = '·';
+          }
+        }
+        
+        container.textContent = canvas.map(row => row.join('')).join('\n');
+      }
+      
+      setInterval(drawWave, 50);
+    }
+
+    // Display playlist tracks
+    function displayPlaylist(id) {
+      const playlist = playlists[id];
+      if (!playlist) return;
+
+      // Show header hypercube
+      const headerHypercube = document.getElementById('headerHypercube');
+      if (headerHypercube && !headerHypercube.classList.contains('active')) {
+        headerHypercube.classList.add('active');
+        animateHeaderHypercube();
+      }
+
+      const content = document.getElementById('content');
+      
+      let html = `
+        <div class="content-header">
+          <div class="content-title">${playlist.name}</div>
+          <div class="content-meta">${playlist.tracks.length} TRACKS</div>
+        </div>
+        <div class="track-list">
+      `;
+
+      playlist.tracks.forEach(track => {
+        const links = [];
+        if (track.apple) links.push(`<a href="${track.apple}">AM</a>`);
+        if (track.spotify) links.push(`<a href="${track.spotify}">SP</a>`);
+        if (track.youtube) links.push(`<a href="${track.youtube}">YT</a>`);
+
+        html += `
+          <div class="track">
+            <div class="track-num">${String(track.num).padStart(2, '0')}</div>
+            <div class="track-artwork">
+              <img src="https://via.placeholder.com/50x50/666666/ffffff?text=${track.num}" alt="">
+            </div>
+            <div class="track-info">
+              <div class="track-title">${track.title}</div>
+              <div class="track-artist">${track.artist}</div>
+            </div>
+            <div class="track-links">
+              ${links.join(' <span class="sep">/</span> ')}
+            </div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+      content.innerHTML = html;
+    }
+
+    // Year toggle handlers
+    document.querySelectorAll('.year-header').forEach(header => {
+      header.addEventListener('click', function() {
+        const year = this.dataset.year;
+        const playlistsContainer = document.querySelector(`.year-playlists[data-year="${year}"]`);
+        const toggle = this.querySelector('.year-toggle');
+        
+        if (playlistsContainer.classList.contains('expanded')) {
+          playlistsContainer.classList.remove('expanded');
+          toggle.textContent = '▶';
+        } else {
+          playlistsContainer.classList.add('expanded');
+          toggle.textContent = '▼';
+        }
+      });
+    });
+
+    // Playlist click handlers
+    document.querySelectorAll('.playlist-item').forEach(item => {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.playlist-item').forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+        displayPlaylist(this.dataset.id);
+      });
+    });
+
+    // Mobile menu toggle
+    function setupMobileMenu() {
+      const toggle = document.getElementById('mobilePlsToggle');
+      const content = document.getElementById('mobilePlsContent');
+      
+      if (!toggle || !content) return;
+      
+      toggle.addEventListener('click', () => {
+        toggle.classList.toggle('active');
+        content.classList.toggle('expanded');
+      });
+    }
+
+    // Populate mobile playlist menu
+    function populateMobilePlaylistMenu() {
+      const menu = document.getElementById('mobilePlaylistMenu');
+      if (!menu) return;
+      
+      // Group by year
+      const years = { 2024: [], 2023: [], 2020: [] };
+      years[2024].push(playlists['2024.11'], playlists['2024.10'], playlists['2024.09']);
+      years[2023].push(playlists['2023.12'], playlists['2023.06']);
+      years[2020].push(playlists['2020.01']);
+      
+      let html = '';
+      Object.keys(years).sort((a, b) => b - a).forEach(year => {
+        const yearPlaylists = years[year];
+        const totalTracks = yearPlaylists.reduce((sum, p) => sum + p.tracks.length, 0);
+        
+        html += `
+          <div class="year-group">
+            <div class="year-header" data-year="${year}">
+              <span><span class="year-toggle">▶</span>${year}</span>
+              <span class="count">${totalTracks}</span>
+            </div>
+            <div class="year-playlists" data-year="${year}">
+              ${yearPlaylists.map(p => `
+                <div class="playlist-item" data-id="${p.name}">
+                  <span>${p.name}</span>
+                  <span class="count">${p.tracks.length}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      });
+      
+      menu.innerHTML = html;
+      
+      // Setup year toggle
+      menu.querySelectorAll('.year-header').forEach(header => {
+        header.addEventListener('click', function() {
+          const year = this.dataset.year;
+          const playlistsContainer = menu.querySelector(`.year-playlists[data-year="${year}"]`);
+          const toggle = this.querySelector('.year-toggle');
+          
+          if (playlistsContainer.classList.contains('expanded')) {
+            playlistsContainer.classList.remove('expanded');
+            toggle.textContent = '▶';
+          } else {
+            playlistsContainer.classList.add('expanded');
+            toggle.textContent = '▼';
+          }
+        });
+      });
+      
+      // Setup playlist clicks
+      menu.querySelectorAll('.playlist-item').forEach(item => {
+        item.addEventListener('click', function() {
+          menu.querySelectorAll('.playlist-item').forEach(i => i.classList.remove('active'));
+          this.classList.add('active');
+          displayPlaylist(this.dataset.id);
+          
+          // Close mobile menu
+          const toggle = document.getElementById('mobilePlsToggle');
+          const content = document.getElementById('mobilePlsContent');
+          if (toggle && content && window.innerWidth <= 768) {
+            toggle.classList.remove('active');
+            content.classList.remove('expanded');
+          }
+        });
+      });
+    }
+
+    // Start animation
+    animateHypercube();
+    setupMobileMenu();
+    populateMobilePlaylistMenu();
+  </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "name": "music-portal",
+  "version": "1.0.0",
+  "description": "Monthly music playlist portal with Apple Music, Spotify, and YouTube links",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "fetch": "node scripts/fetch-playlists.js",
+    "dev": "python3 -m http.server 8000 --directory public"
+  },
+  "keywords": [
+    "music",
+    "playlist",
+    "apple-music",
+    "spotify",
+    "youtube"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.2",
+    "axios-cookiejar-support": "^5.0.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.22.1",
+    "tough-cookie": "^4.1.3"
+  }
+}
