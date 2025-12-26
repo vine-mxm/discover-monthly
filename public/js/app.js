@@ -4,7 +4,8 @@
 // ETHICAL MUSIC MODAL
 // ===================================
 
-const MODAL_STORAGE_KEY = 'ethicalMusicModalSeen';
+const MODAL_STORAGE_KEY = 'ethicalMusicModalLastSeen';
+const MODAL_RESHOW_DAYS = 2;
 
 function initEthicalModal() {
   const modal = document.getElementById('ethicalModal');
@@ -13,20 +14,31 @@ function initEthicalModal() {
   // Close modal on OK button
   okBtn.addEventListener('click', () => {
     modal.classList.remove('active');
-    localStorage.setItem(MODAL_STORAGE_KEY, 'true');
+    localStorage.setItem(MODAL_STORAGE_KEY, Date.now().toString());
   });
   
   // Close modal on overlay click
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.classList.remove('active');
-      localStorage.setItem(MODAL_STORAGE_KEY, 'true');
+      localStorage.setItem(MODAL_STORAGE_KEY, Date.now().toString());
     }
   });
 }
 
 function shouldShowModal() {
-  return !localStorage.getItem(MODAL_STORAGE_KEY);
+  const lastSeen = localStorage.getItem(MODAL_STORAGE_KEY);
+  
+  // If never seen, show modal
+  if (!lastSeen) {
+    return true;
+  }
+  
+  // Check if more than MODAL_RESHOW_DAYS have passed
+  const lastSeenDate = parseInt(lastSeen, 10);
+  const daysSince = (Date.now() - lastSeenDate) / (1000 * 60 * 60 * 24);
+  
+  return daysSince > MODAL_RESHOW_DAYS;
 }
 
 function showEthicalModal() {
@@ -54,7 +66,7 @@ function handleStreamingLinkClick(e, platform) {
     const originalHandler = okBtn.onclick;
     okBtn.onclick = () => {
       modal.classList.remove('active');
-      localStorage.setItem(MODAL_STORAGE_KEY, 'true');
+      localStorage.setItem(MODAL_STORAGE_KEY, Date.now().toString());
       window.open(originalHref, '_blank');
       okBtn.onclick = originalHandler; // Restore original handler
     };
