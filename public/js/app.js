@@ -178,6 +178,7 @@ function displayPlaylistContent(playlist) {
     if (track.links?.appleMusic) links.push(`<a href="${track.links.appleMusic}" target="_blank">AM</a>`);
     if (track.links?.spotify) links.push(`<a href="${track.links.spotify}" target="_blank">SP</a>`);
     if (track.links?.youtube) links.push(`<a href="${track.links.youtube}" target="_blank">YT</a>`);
+    if (track.links?.bandcamp) links.push(`<a href="${track.links.bandcamp}" target="_blank">BC</a>`);
     
     html += `
       <div class="track">

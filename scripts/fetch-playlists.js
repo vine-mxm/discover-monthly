@@ -1,6 +1,7 @@
 import { AppleMusicClient } from './lib/apple-music.js';
 import { SpotifyClient } from './lib/spotify.js';
-import { YouTubeClient } from './lib/youtube.js';
+import { YouTubeScraperClient } from './lib/youtube-scraper.js';
+import { BandcampClient } from './lib/bandcamp.js';
 import { PlaylistDiffer } from './lib/playlist-differ.js';
 import { ChangeLogger } from './lib/change-logger.js';
 import { config, validateConfig } from './config.js';
@@ -69,8 +70,8 @@ function parseArgs() {
   return parsed;
 }
 
-// Process a new playlist completely (fetch tracks + match Spotify/YouTube)
-async function processNewPlaylist(playlist, appleMusicClient, spotifyClient, youtubeClient) {
+// Process a new playlist completely (fetch tracks + match Spotify/YouTube/Bandcamp)
+async function processNewPlaylist(playlist, appleMusicClient, spotifyClient, youtubeClient, bandcampClient) {
   const playlistInfo = appleMusicClient.extractPlaylistInfo(playlist);
   
   try {
@@ -104,6 +105,18 @@ async function processNewPlaylist(playlist, appleMusicClient, spotifyClient, you
           trackInfo.links = trackInfo.links || {};
           trackInfo.links.youtube = youtubeResult.url;
         }
+      }
+      
+      // Match Bandcamp
+      const bandcampResult = await bandcampClient.findTrack(
+        trackInfo.isrc,
+        trackInfo.title,
+        trackInfo.artist,
+        trackInfo.album
+      );
+      if (bandcampResult) {
+        trackInfo.links = trackInfo.links || {};
+        trackInfo.links.bandcamp = bandcampResult.url;
       }
       
       // Apple Music link
@@ -161,8 +174,11 @@ async function main() {
     );
     await spotifyClient.authenticate();
     
-    const youtubeClient = new YouTubeClient(config.youtube.apiKey);
-    console.log('✓ YouTube client initialized\n');
+    const youtubeClient = new YouTubeScraperClient();
+    console.log('✓ YouTube scraper client initialized (no API key required)\n');
+    
+    const bandcampClient = new BandcampClient();
+    console.log('✓ Bandcamp scraper client initialized (no API key required)\n');
     
     // Load existing data (if not force refresh)
     console.log('[2/6] Checking for existing data...\n');
@@ -227,7 +243,8 @@ async function main() {
             playlist, 
             appleMusicClient, 
             spotifyClient, 
-            youtubeClient
+            youtubeClient,
+            bandcampClient
           );
           
           if (processed) {
@@ -255,6 +272,7 @@ async function main() {
       if (missingLinks.length > 0) {
         let spotifyFixed = 0;
         let youtubeFixed = 0;
+        let bandcampFixed = 0;
         
         for (const item of missingLinks) {
           if (item.missingSpotify) {
@@ -283,11 +301,27 @@ async function main() {
             }
           }
           
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Try Bandcamp if missing
+          if (!item.track.links?.bandcamp) {
+            const bandcampResult = await bandcampClient.findTrack(
+              item.track.isrc,
+              item.track.title,
+              item.track.artist,
+              item.track.album
+            );
+            if (bandcampResult) {
+              item.track.links = item.track.links || {};
+              item.track.links.bandcamp = bandcampResult.url;
+              bandcampFixed++;
+            }
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
         
         console.log(`  ✓ Fixed ${spotifyFixed} Spotify links`);
-        console.log(`  ✓ Fixed ${youtubeFixed} YouTube links\n`);
+        console.log(`  ✓ Fixed ${youtubeFixed} YouTube links`);
+        console.log(`  ✓ Fixed ${bandcampFixed} Bandcamp links\n`);
       } else {
         console.log('  No missing links to retry\n');
       }
@@ -393,11 +427,12 @@ async function main() {
       }
       
       // Match tracks with Spotify and YouTube
-      console.log('[5/6] Matching tracks with Spotify and YouTube...\n');
+      console.log('[5/6] Matching tracks with Spotify, YouTube, and Bandcamp...\n');
       
       let totalTracks = 0;
       let spotifyMatches = 0;
       let youtubeMatches = 0;
+      let bandcampMatches = 0;
       
       for (const playlist of processedPlaylists) {
         console.log(`  ${playlist.name}:`);
@@ -433,12 +468,26 @@ async function main() {
             }
           }
           
+          // Search on Bandcamp
+          const bandcampResult = await bandcampClient.findTrack(
+            track.isrc,
+            track.title,
+            track.artist,
+            track.album
+          );
+          
+          if (bandcampResult) {
+            track.links = track.links || {};
+            track.links.bandcamp = bandcampResult.url;
+            bandcampMatches++;
+          }
+          
           // Always add Apple Music link
           track.links = track.links || {};
           track.links.appleMusic = track.appleMusic.url;
           
           // Small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
         
         console.log(`    ✓ Completed`);
@@ -447,7 +496,8 @@ async function main() {
       console.log(`\n✓ Matching complete:`);
       console.log(`  - Total tracks: ${totalTracks}`);
       console.log(`  - Spotify matches: ${spotifyMatches} (${Math.round(spotifyMatches/totalTracks*100)}%)`);
-      console.log(`  - YouTube matches: ${youtubeMatches} (${Math.round(youtubeMatches/totalTracks*100)}%)\n`);
+      console.log(`  - YouTube matches: ${youtubeMatches} (${Math.round(youtubeMatches/totalTracks*100)}%)`);
+      console.log(`  - Bandcamp matches: ${bandcampMatches} (${Math.round(bandcampMatches/totalTracks*100)}%)\n`);
       
       // Sort playlists by date (newest first)
       processedPlaylists.sort((a, b) => {
