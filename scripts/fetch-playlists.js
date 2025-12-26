@@ -302,7 +302,7 @@ async function main() {
           }
           
           // Try Bandcamp if missing
-          if (!item.track.links?.bandcamp) {
+          if (item.missingBandcamp) {
             const bandcampResult = await bandcampClient.findTrack(
               item.track.isrc,
               item.track.title,

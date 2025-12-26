@@ -53,7 +53,7 @@ export class PlaylistDiffer {
   }
 
   /**
-   * Trova tracce con link mancanti (Spotify o YouTube)
+   * Trova tracce con link mancanti (Spotify, YouTube, o Bandcamp)
    */
   static findMissingLinks(playlists) {
     const tracksWithMissingLinks = [];
@@ -64,14 +64,16 @@ export class PlaylistDiffer {
       for (const track of playlist.tracks) {
         const hasSpotify = track.links?.spotify && track.links.spotify !== '#';
         const hasYoutube = track.links?.youtube && track.links.youtube !== '#';
+        const hasBandcamp = track.links?.bandcamp && track.links.bandcamp !== '#';
         
-        if (!hasSpotify || !hasYoutube) {
+        if (!hasSpotify || !hasYoutube || !hasBandcamp) {
           tracksWithMissingLinks.push({
             playlistId: playlist.id,
             playlistName: playlist.name,
             track,
             missingSpotify: !hasSpotify,
             missingYoutube: !hasYoutube,
+            missingBandcamp: !hasBandcamp,
           });
         }
       }
