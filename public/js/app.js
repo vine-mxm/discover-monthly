@@ -1,4 +1,81 @@
 // Hypercube animation
+
+// ===================================
+// ETHICAL MUSIC MODAL
+// ===================================
+
+const MODAL_STORAGE_KEY = 'ethicalMusicModalLastSeen';
+const MODAL_RESHOW_DAYS = 2;
+
+function initEthicalModal() {
+  const modal = document.getElementById('ethicalModal');
+  const okBtn = document.getElementById('modalOk');
+  
+  // Close modal on OK button
+  okBtn.addEventListener('click', () => {
+    modal.classList.remove('active');
+    localStorage.setItem(MODAL_STORAGE_KEY, Date.now().toString());
+  });
+  
+  // Close modal on overlay click (without saving to localStorage)
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('active');
+    }
+  });
+}
+
+function shouldShowModal() {
+  const lastSeen = localStorage.getItem(MODAL_STORAGE_KEY);
+  
+  // If never seen, show modal
+  if (!lastSeen) {
+    return true;
+  }
+  
+  // Check if more than MODAL_RESHOW_DAYS have passed
+  const lastSeenDate = parseInt(lastSeen, 10);
+  const daysSince = (Date.now() - lastSeenDate) / (1000 * 60 * 60 * 24);
+  
+  return daysSince > MODAL_RESHOW_DAYS;
+}
+
+function showEthicalModal() {
+  const modal = document.getElementById('ethicalModal');
+  modal.classList.add('active');
+}
+
+function handleStreamingLinkClick(e, platform) {
+  // Don't show modal for Bandcamp clicks
+  if (platform === 'bandcamp') {
+    return;
+  }
+  
+  // Check if modal should be shown
+  if (shouldShowModal()) {
+    e.preventDefault();
+    showEthicalModal();
+    
+    // Store the original href to allow user to continue if they want
+    const originalHref = e.currentTarget.href;
+    const modal = document.getElementById('ethicalModal');
+    const okBtn = document.getElementById('modalOk');
+    
+    // Override OK button to open the link after dismissal
+    const originalHandler = okBtn.onclick;
+    okBtn.onclick = () => {
+      modal.classList.remove('active');
+      localStorage.setItem(MODAL_STORAGE_KEY, Date.now().toString());
+      window.open(originalHref, '_blank');
+      okBtn.onclick = originalHandler; // Restore original handler
+    };
+  }
+}
+
+// ===================================
+// HYPERCUBE ANIMATION
+// ===================================
+
 function animateHypercube() {
   const container = document.getElementById('hypercube');
   if (!container) return;
@@ -27,6 +104,10 @@ function animateHypercube() {
   window.addEventListener('resize', updateDimensions);
   
   function drawHypercube() {
+    // Skip drawing if container is hidden or dimensions are invalid
+    if (!container || container.offsetParent === null || width <= 0 || height <= 0) {
+      return;
+    }
     
     // Rotate angle
     angle += 0.02;
@@ -63,7 +144,10 @@ function animateHypercube() {
       return [Math.round(x2D), Math.round(y2D)];
     });
     
-    // Create canvas
+    // Create canvas - validate dimensions first
+    if (width <= 0 || height <= 0 || !isFinite(width) || !isFinite(height)) {
+      return;
+    }
     const canvas = Array(height).fill().map(() => Array(width).fill(' '));
     
     // Draw edges
@@ -175,9 +259,10 @@ function displayPlaylistContent(playlist) {
   
   playlist.tracks.forEach((track, index) => {
     const links = [];
-    if (track.links?.appleMusic) links.push(`<a href="${track.links.appleMusic}" target="_blank">AM</a>`);
-    if (track.links?.spotify) links.push(`<a href="${track.links.spotify}" target="_blank">SP</a>`);
-    if (track.links?.youtube) links.push(`<a href="${track.links.youtube}" target="_blank">YT</a>`);
+    if (track.links?.appleMusic) links.push(`<a href="${track.links.appleMusic}" class="stream-link" data-platform="applemusic" target="_blank">AM</a>`);
+    if (track.links?.spotify) links.push(`<a href="${track.links.spotify}" class="stream-link" data-platform="spotify" target="_blank">SP</a>`);
+    if (track.links?.youtube) links.push(`<a href="${track.links.youtube}" class="stream-link" data-platform="youtube" target="_blank">YT</a>`);
+    if (track.links?.bandcamp) links.push(`<a href="${track.links.bandcamp}" class="stream-link" data-platform="bandcamp" target="_blank">BC</a>`);
     
     html += `
       <div class="track">
@@ -198,6 +283,14 @@ function displayPlaylistContent(playlist) {
   
   html += `</div>`;
   content.innerHTML = html;
+  
+  // Add click handlers to streaming links
+  document.querySelectorAll('.stream-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      const platform = e.currentTarget.dataset.platform;
+      handleStreamingLinkClick(e, platform);
+    });
+  });
 }
 
 // Load and display playlists
@@ -399,9 +492,11 @@ if (document.readyState === 'loading') {
     animateHypercube();
     loadPlaylists();
     setupMobileMenu();
+    initEthicalModal();
   });
 } else {
   animateHypercube();
   loadPlaylists();
   setupMobileMenu();
+  initEthicalModal();
 }

@@ -97,6 +97,21 @@ export class AppleMusicClient {
 
   extractTrackInfo(track) {
     const attributes = track.attributes || {};
+    const playParams = attributes.playParams || {};
+    
+    // Try to get public catalog URL
+    let appleMusicUrl = null;
+    
+    // If we have a catalogId, create a public URL
+    if (playParams.catalogId) {
+      // Simple format: just the song ID
+      // Apple Music will redirect to the full album URL automatically
+      appleMusicUrl = `https://music.apple.com/${this.storefront}/song/${playParams.catalogId}`;
+    }
+    // Fallback to library link (private, but better than nothing)
+    else if (track.id) {
+      appleMusicUrl = `https://music.apple.com/library/song/${track.id}`;
+    }
     
     return {
       title: attributes.name || 'Unknown',
@@ -108,7 +123,8 @@ export class AppleMusicClient {
         attributes.artwork.url.replace('{w}', '600').replace('{h}', '600') : null,
       appleMusic: {
         id: track.id,
-        url: track.id ? `https://music.apple.com/library/song/${track.id}` : null,
+        catalogId: playParams.catalogId || null,
+        url: appleMusicUrl,
       }
     };
   }

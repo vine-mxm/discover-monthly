@@ -16,15 +16,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from public directory
-app.use(express.static('public', {
+// Serve static files from public directory (use absolute path)
+app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: NODE_ENV === 'production' ? '30d' : 0,
   etag: true,
   lastModified: true,
+  setHeaders: (res, filePath) => {
+    // Ensure correct MIME types
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
+    } else if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css; charset=UTF-8');
+    }
+  }
 }));
 
-// Serve data directory
-app.use('/data', express.static('data', {
+// Serve data directory (use absolute path)
+app.use('/data', express.static(path.join(__dirname, 'data'), {
   maxAge: '1h',
   etag: true,
   lastModified: true,
@@ -45,8 +53,13 @@ app.get('/api/playlists', (req, res) => {
   res.sendFile(path.join(__dirname, 'data', 'playlists.json'));
 });
 
-// Fallback to index.html for SPA routing
+// Fallback to index.html for HTML routes (but not for static files)
 app.get('*', (req, res) => {
+  // If request is for a static file that wasn't found, return 404
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json)$/)) {
+    return res.status(404).send('File not found');
+  }
+  // Otherwise serve index.html for SPA routing
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
