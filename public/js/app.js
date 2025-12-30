@@ -46,16 +46,18 @@ function showEthicalModal() {
 }
 
 function handleStreamingLinkClick(e, platform) {
-  // Track streaming link click with Umami
-  if (window.umami) {
+  // Track streaming link click with Plausible
+  if (window.plausible) {
     const trackElement = e.currentTarget.closest('.track');
     const trackTitle = trackElement?.querySelector('.track-title')?.textContent || 'Unknown';
     const trackArtist = trackElement?.querySelector('.track-artist')?.textContent || 'Unknown';
     
-    window.umami.track('streaming-link-click', {
-      platform: platform,
-      artist: trackArtist,
-      track: trackTitle
+    window.plausible('Streaming Link Click', {
+      props: {
+        platform: platform,
+        artist: trackArtist,
+        track: trackTitle
+      }
     });
   }
   
@@ -400,12 +402,14 @@ function populatePlaylistMenu(playlists) {
       this.classList.add('active');
       const playlist = JSON.parse(this.dataset.playlist);
       
-      // Track playlist view with Umami
-      if (window.umami) {
-        window.umami.track('playlist-view', {
-          playlist: playlist.name,
-          tracks: playlist.tracks.length,
-          year: playlist.year
+      // Track playlist view with Plausible
+      if (window.plausible) {
+        window.plausible('Playlist View', {
+          props: {
+            playlist: playlist.name,
+            tracks: playlist.tracks.length,
+            year: playlist.year
+          }
         });
       }
       
@@ -497,12 +501,14 @@ function populateMobilePlaylistMenu(playlists) {
       this.classList.add('active');
       const playlist = JSON.parse(this.dataset.playlist);
       
-      // Track playlist view with Umami
-      if (window.umami) {
-        window.umami.track('playlist-view', {
-          playlist: playlist.name,
-          tracks: playlist.tracks.length,
-          year: playlist.year
+      // Track playlist view with Plausible
+      if (window.plausible) {
+        window.plausible('Playlist View', {
+          props: {
+            playlist: playlist.name,
+            tracks: playlist.tracks.length,
+            year: playlist.year
+          }
         });
       }
       

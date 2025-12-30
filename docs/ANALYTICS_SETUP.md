@@ -1,230 +1,175 @@
-# Analytics Setup con Umami
+# Analytics Setup con Plausible
 
-Guida completa per installare e configurare Umami analytics sul server remoto.
+Guida completa per installare e configurare Plausible Analytics sul server remoto.
 
 ## Indice
-1. [Prerequisiti](#prerequisiti)
-2. [Installazione Umami](#installazione-umami)
-3. [Configurazione Database](#configurazione-database)
+1. [Perché Plausible](#perché-plausible)
+2. [Prerequisiti](#prerequisiti)
+3. [Installazione con Docker](#installazione-con-docker)
 4. [Configurazione Nginx/Apache](#configurazione-nginx-apache)
-5. [Integrazione Frontend](#integrazione-frontend)
-6. [Eventi Personalizzati](#eventi-personalizzati)
-7. [Manutenzione](#manutenzione)
+5. [Primo Accesso](#primo-accesso)
+6. [Integrazione Frontend](#integrazione-frontend)
+7. [Eventi Personalizzati](#eventi-personalizzati)
+8. [Manutenzione](#manutenzione)
+
+---
+
+## Perché Plausible
+
+✅ **Vantaggi:**
+- UI bellissima e intuitiva
+- Installazione semplicissima con Docker
+- Script leggerissimo (< 1KB)
+- Privacy-first, GDPR compliant
+- No cookie, no tracking invasivo
+- Open source e self-hosted
+
+✅ **Perfetto per il tuo portale musicale!**
 
 ---
 
 ## Prerequisiti
 
 Sul tuo server remoto dovrai avere:
-- Node.js 18+ (o 20+ raccomandato)
-- PostgreSQL 12+ o MySQL 8+
+- Docker + Docker Compose
 - Nginx o Apache (per reverse proxy)
-- PM2 o systemd (per gestire il processo)
+- Dominio configurato (`stats.sixonesixo.com`)
 
-### Verifica prerequisiti
+### Installa Docker
+
+Se non hai Docker installato:
 
 ```bash
-# Verifica Node.js
-node --version  # Deve essere >= 18
+# Ubuntu/Debian
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
 
-# Verifica PostgreSQL
-psql --version  # Oppure mysql --version
+# Installa Docker Compose
+sudo apt-get install docker-compose-plugin
 
-# Verifica web server
-nginx -v  # Oppure apache2 -v
+# Verifica installazione
+docker --version
+docker compose version
 ```
 
 ---
 
-## Installazione Umami
+## Installazione con Docker
 
-### Opzione 1: Installazione Standard (Consigliata)
+### Step 1: Scarica Plausible Hosting
 
 ```bash
-# 1. Vai nella directory delle applicazioni
-cd /var/www  # O dove preferisci
+# Vai nella directory delle applicazioni
+cd /var/www
 
-# 2. Clona Umami
-git clone https://github.com/umami-software/umami.git
-cd umami
-
-# 3. Installa dipendenze
-npm install
-
-# 4. Crea il file .env
-cp .env.example .env
+# Clona la repository di hosting
+git clone https://github.com/plausible/hosting
+cd hosting
 ```
 
-### Opzione 2: Installazione con Docker
+### Step 2: Configura le variabili d'ambiente
 
 ```bash
-# Se preferisci Docker, crea un docker-compose.yml:
-version: '3'
+# Genera chiavi segrete
+openssl rand -base64 64 | tr -d '\n' ; echo
+
+# Copia il file di esempio
+cp plausible-conf.env.example plausible-conf.env
+
+# Edita il file
+nano plausible-conf.env
+```
+
+Configura nel file `plausible-conf.env`:
+
+```bash
+# Server
+BASE_URL=https://stats.sixonesixo.com
+SECRET_KEY_BASE=<inserisci-la-chiave-generata-con-openssl>
+
+# Database (non modificare se usi Docker)
+DATABASE_URL=postgres://postgres:postgres@plausible_db:5432/plausible_db
+CLICKHOUSE_DATABASE_URL=http://plausible_events_db:8123/plausible_events_db
+
+# Admin (per primo accesso)
+ADMIN_USER_EMAIL=tua-email@esempio.com
+ADMIN_USER_NAME=Admin
+ADMIN_USER_PWD=cambiami-dopo-primo-accesso
+
+# Disabilita registrazioni pubbliche (importante!)
+DISABLE_REGISTRATION=true
+
+# SMTP (opzionale - per email alerts)
+# MAILER_EMAIL=noreply@stats.sixonesixo.com
+# SMTP_HOST_ADDR=smtp.tuo-provider.com
+# SMTP_HOST_PORT=587
+# SMTP_USER_NAME=tuo-username
+# SMTP_USER_PWD=tua-password
+# SMTP_HOST_SSL_ENABLED=true
+```
+
+### Step 3: Configura Docker Compose (opzionale)
+
+Il file `docker-compose.yml` di default va bene, ma puoi personalizzare le porte se necessario.
+
+Edita `docker-compose.yml` se vuoi cambiare la porta (default 8000):
+
+```yaml
 services:
-  umami:
-    image: ghcr.io/umami-software/umami:postgresql-latest
+  plausible:
     ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL: postgresql://umami:umami@db:5432/umami
-      DATABASE_TYPE: postgresql
-      APP_SECRET: sostituisci-con-stringa-random
-    depends_on:
-      - db
-    restart: always
-  db:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: umami
-      POSTGRES_USER: umami
-      POSTGRES_PASSWORD: umami
-    volumes:
-      - umami-db-data:/var/lib/postgresql/data
-    restart: always
-
-volumes:
-  umami-db-data:
+      - 8000:8000  # Cambia se la porta 8000 è occupata
 ```
 
----
-
-## Configurazione Database
-
-### PostgreSQL (Consigliato)
+### Step 4: Avvia Plausible
 
 ```bash
-# 1. Accedi a PostgreSQL
-sudo -u postgres psql
+# Nella directory /var/www/hosting
 
-# 2. Crea database e utente
-CREATE DATABASE umami;
-CREATE USER umami_user WITH ENCRYPTED PASSWORD 'tua_password_sicura';
-GRANT ALL PRIVILEGES ON DATABASE umami TO umami_user;
-\q
+# Avvia i container
+docker compose up -d
+
+# Verifica che tutto funzioni
+docker compose ps
+
+# Vedi i logs
+docker compose logs -f plausible
 ```
 
-### MySQL
+Dovresti vedere qualcosa come:
+```
+plausible    | [info] Running PlausibleWeb.Endpoint with Bandit 1.2.0 at 0.0.0.0:8000 (http)
+```
+
+### Step 5: Verifica funzionamento
 
 ```bash
-# 1. Accedi a MySQL
-sudo mysql
+# Testa localmente
+curl http://localhost:8000
 
-# 2. Crea database e utente
-CREATE DATABASE umami;
-CREATE USER 'umami_user'@'localhost' IDENTIFIED BY 'tua_password_sicura';
-GRANT ALL PRIVILEGES ON umami.* TO 'umami_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-### Configura .env
-
-Edita il file `.env` in `/var/www/umami/.env`:
-
-```bash
-# PostgreSQL
-DATABASE_URL=postgresql://umami_user:tua_password_sicura@localhost:5432/umami
-
-# MySQL (alternativo)
-# DATABASE_URL=mysql://umami_user:tua_password_sicura@localhost:3306/umami
-
-# Genera una stringa random per APP_SECRET
-# Puoi usare: openssl rand -base64 32
-APP_SECRET=genera_una_stringa_random_sicura_qui
-
-# Porta (default 3000)
-PORT=3000
-
-# Hostname (opzionale)
-HOSTNAME=0.0.0.0
-```
-
-### Inizializza Database
-
-```bash
-cd /var/www/umami
-
-# Build dell'applicazione
-npm run build
-
-# Inizializza il database (crea le tabelle)
-npx prisma migrate deploy
-```
-
----
-
-## Avvio Umami
-
-### Opzione 1: Con PM2 (Consigliato per produzione)
-
-```bash
-# Installa PM2 globalmente
-npm install -g pm2
-
-# Avvia Umami
-cd /var/www/umami
-pm2 start npm --name "umami" -- start
-
-# Salva la configurazione PM2
-pm2 save
-pm2 startup  # Segui le istruzioni per avvio automatico
-
-# Comandi utili PM2
-pm2 status          # Controlla stato
-pm2 logs umami      # Vedi logs
-pm2 restart umami   # Riavvia
-pm2 stop umami      # Ferma
-```
-
-### Opzione 2: Con systemd
-
-Crea `/etc/systemd/system/umami.service`:
-
-```ini
-[Unit]
-Description=Umami Analytics
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/var/www/umami
-Environment="NODE_ENV=production"
-ExecStart=/usr/bin/npm start
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Poi:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable umami
-sudo systemctl start umami
-sudo systemctl status umami
+# Dovresti vedere l'HTML della pagina di login
 ```
 
 ---
 
 ## Configurazione Nginx/Apache
 
-### Nginx
+### Nginx (Consigliato)
 
-Crea `/etc/nginx/sites-available/umami`:
+Crea `/etc/nginx/sites-available/stats.sixonesixo.com`:
 
 ```nginx
 server {
     listen 80;
-    server_name stats.sixonesixo.com;  # Sostituisci con il tuo dominio
+    server_name stats.sixonesixo.com;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
     }
 }
 ```
@@ -232,7 +177,7 @@ server {
 Attiva il sito:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/umami /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/stats.sixonesixo.com /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -247,15 +192,15 @@ sudo a2enmod proxy_http
 sudo a2enmod headers
 ```
 
-Crea `/etc/apache2/sites-available/umami.conf`:
+Crea `/etc/apache2/sites-available/stats.sixonesixo.com.conf`:
 
 ```apache
 <VirtualHost *:80>
     ServerName stats.sixonesixo.com
 
     ProxyPreserveHost On
-    ProxyPass / http://localhost:3000/
-    ProxyPassReverse / http://localhost:3000/
+    ProxyPass / http://localhost:8000/
+    ProxyPassReverse / http://localhost:8000/
 
     <Proxy *>
         Order deny,allow
@@ -267,11 +212,11 @@ Crea `/etc/apache2/sites-available/umami.conf`:
 Attiva il sito:
 
 ```bash
-sudo a2ensite umami
+sudo a2ensite stats.sixonesixo.com
 sudo systemctl reload apache2
 ```
 
-### SSL con Let's Encrypt (Fortemente raccomandato)
+### SSL con Let's Encrypt (IMPORTANTE!)
 
 ```bash
 # Installa certbot
@@ -281,362 +226,390 @@ sudo apt install certbot python3-certbot-nginx  # Per Nginx
 # Ottieni certificato SSL
 sudo certbot --nginx -d stats.sixonesixo.com  # Per Nginx
 # sudo certbot --apache -d stats.sixonesixo.com  # Per Apache
+
+# Il certificato si rinnoverà automaticamente
 ```
 
 ---
 
 ## Primo Accesso
 
-1. Apri il browser e vai su `http://stats.sixonesixo.com`
-2. Login di default:
-   - **Username**: `admin`
-   - **Password**: `umami`
+1. Apri il browser e vai su `https://stats.sixonesixo.com`
+2. Login con le credenziali che hai messo in `plausible-conf.env`:
+   - Email: `tua-email@esempio.com`
+   - Password: `cambiami-dopo-primo-accesso`
 3. **IMPORTANTE**: Cambia subito la password!
 
-### Crea un nuovo sito
+### Aggiungi il tuo sito
 
-1. Vai su **Settings** > **Websites**
-2. Clicca **Add website**
-3. Inserisci:
-   - **Name**: `Music Portal`
-   - **Domain**: `sixonesixo.com` (il dominio del tuo portale)
-   - **Enable share URL**: No (privacy)
-4. Salva e copia il **Tracking code** generato
+1. Clicca su **"+ Add website"**
+2. **Domain**: `sixonesixo.com` (senza http/https)
+3. **Timezone**: Scegli il tuo timezone
+4. Clicca **"Add snippet"**
+5. Copia lo snippet che ti viene mostrato
 
 ---
 
 ## Integrazione Frontend
 
-### 1. Aggiungi lo script di tracking
+### Script di tracking
 
-Modifica `public/index.html` aggiungendo nel `<head>`:
-
-```html
-<head>
-  <!-- ... altri meta tags ... -->
-  
-  <!-- Umami Analytics -->
-  <script async 
-    src="https://stats.sixonesixo.com/script.js" 
-    data-website-id="IL-TUO-WEBSITE-ID">
-  </script>
-</head>
-```
-
-### 2. Aggiungi anche in `public/playlist.html`
+Lo snippet sarà tipo:
 
 ```html
-<head>
-  <!-- ... altri meta tags ... -->
-  
-  <!-- Umami Analytics -->
-  <script async 
-    src="https://stats.sixonesixo.com/script.js" 
-    data-website-id="IL-TUO-WEBSITE-ID">
-  </script>
-</head>
+<script defer data-domain="sixonesixo.com" src="https://stats.sixonesixo.com/js/script.js"></script>
 ```
+
+**GIÀ FATTO!** Ho già aggiunto gli script nel tuo codice, devi solo:
+
+1. Sostituire in `public/index.html` e `public/playlist.html`:
+   - L'URL dello script è già corretto: `https://stats.sixonesixo.com/js/script.js`
+   - Cambia `data-website-id="YOUR-WEBSITE-ID-HERE"` con `data-domain="sixonesixo.com"`
+
+Il codice nei file HTML dovrebbe diventare:
+
+```html
+<!-- Plausible Analytics -->
+<script defer 
+  data-domain="sixonesixo.com" 
+  src="https://stats.sixonesixo.com/js/script.js">
+</script>
+```
+
+### Verifica funzionamento
+
+1. Apri il tuo sito `https://sixonesixo.com`
+2. Apri DevTools > Network
+3. Cerca una chiamata a `stats.sixonesixo.com/js/script.js`
+4. Se vedi la chiamata e non ci sono errori, funziona!
+5. Vai su `https://stats.sixonesixo.com` e dovresti vedere la visita in tempo reale
 
 ---
 
 ## Eventi Personalizzati
 
-Per tracciare click sui link di streaming, aggiungi in `public/js/app.js`:
+Plausible usa un'API diversa da Umami. Ho già implementato il tracking nel codice, ma devi aggiornare da `window.umami` a `window.plausible`.
 
-### Tracking click sui link
-
-Modifica la funzione `handleStreamingLinkClick`:
+### API Plausible per eventi personalizzati
 
 ```javascript
-function handleStreamingLinkClick(e, platform) {
-  // Track click event
-  if (window.umami) {
-    const trackInfo = e.currentTarget.closest('.track');
-    const trackTitle = trackInfo?.querySelector('.track-title')?.textContent || 'Unknown';
-    const trackArtist = trackInfo?.querySelector('.track-artist')?.textContent || 'Unknown';
-    
-    window.umami.track('streaming-link-click', {
-      platform: platform,
-      track: `${trackArtist} - ${trackTitle}`
-    });
-  }
-  
-  // ... resto della funzione ...
-}
+// Sintassi Plausible
+window.plausible('event-name', {props: {key: 'value'}})
 ```
 
-### Tracking selezione playlist
+**GIÀ FATTO!** Ho già implementato gli eventi in `public/js/app.js`, ma con sintassi Umami. Li devo aggiornare per Plausible.
 
-Modifica dove gestisci il click sulla playlist (circa linea 385):
+Gli eventi tracciati sono:
+
+### 1. Visualizzazioni Playlist
 
 ```javascript
-item.addEventListener('click', function() {
-  menu.querySelectorAll('.playlist-item').forEach(i => i.classList.remove('active'));
-  this.classList.add('active');
-  const playlist = JSON.parse(this.dataset.playlist);
-  
-  // Track playlist view
-  if (window.umami) {
-    window.umami.track('playlist-view', {
+// Track playlist view
+if (window.plausible) {
+  window.plausible('Playlist View', {
+    props: {
       playlist: playlist.name,
-      tracks: playlist.tracks.length
-    });
-  }
-  
-  displayPlaylistContent(playlist);
-});
+      tracks: playlist.tracks.length,
+      year: playlist.year
+    }
+  });
+}
 ```
 
-### Eventi disponibili da tracciare
+### 2. Click sui Link Streaming
 
 ```javascript
-// Esempi di eventi utili
-
-// 1. Apertura modale etica
-if (window.umami) {
-  window.umami.track('ethical-modal-shown');
+// Track streaming link click
+if (window.plausible) {
+  window.plausible('Streaming Link Click', {
+    props: {
+      platform: platform,  // spotify, applemusic, youtube, bandcamp
+      artist: trackArtist,
+      track: trackTitle
+    }
+  });
 }
-
-// 2. Click su link specifico
-window.umami.track('link-click', {
-  platform: 'spotify',
-  artist: 'Nome Artista',
-  track: 'Nome Traccia'
-});
-
-// 3. Tempo di permanenza su playlist
-window.umami.track('playlist-time', {
-  playlist: 'Dicembre 2024',
-  duration: 120  // secondi
-});
-
-// 4. Toggle mobile menu
-window.umami.track('mobile-menu-toggle');
 ```
 
----
+### Visualizzare eventi personalizzati
 
-## Metriche Disponibili
+1. Vai su `https://stats.sixonesixo.com`
+2. Clicca sul tuo sito
+3. In alto clicca su **"More" > "Goals"**
+4. Aggiungi i goal:
+   - **Custom Event**: `Playlist View`
+   - **Custom Event**: `Streaming Link Click`
 
-Umami traccia automaticamente:
-
-### Metriche base
-- **Page views**: Visualizzazioni pagine
-- **Unique visitors**: Visitatori unici
-- **Bounce rate**: Tasso di rimbalzo
-- **Average time**: Tempo medio sul sito
-
-### Dimensioni
-- **Pages**: Pagine visitate
-- **Referrers**: Da dove arrivano
-- **Browsers**: Browser usati
-- **OS**: Sistema operativo
-- **Devices**: Desktop/Mobile/Tablet
-- **Countries**: Geolocalizzazione
-- **Languages**: Lingua browser
-
-### Eventi personalizzati
-- Tutti gli eventi che tracki con `umami.track()`
+Ora potrai vedere questi eventi nelle statistiche!
 
 ---
 
-## Dashboard e Reports
+## Dashboard Plausible
 
-### Visualizza statistiche
+### Metriche disponibili
 
-1. Accedi a `https://stats.sixonesixo.com`
-2. Seleziona il website "Music Portal"
-3. Scegli periodo: Last 24h, 7 days, 30 days, custom
+Plausible traccia automaticamente:
 
-### Report interessanti per il tuo portale
+**Realtime (ultimi 30 min)**
+- Visitatori ora online
+- Pagine viste in tempo reale
 
-- **Playlist più viste**: Filtra eventi `playlist-view`
-- **Piattaforme preferite**: Filtra eventi `streaming-link-click` per platform
-- **Picchi di traffico**: Guarda quando visitano di più
-- **Provenienza utenti**: Vedi da quali siti arrivano
-- **Mobile vs Desktop**: Capire come navigano
+**Overview**
+- Unique visitors
+- Total pageviews
+- Bounce rate
+- Visit duration
 
-### Esporta dati
+**Top Pages**
+- Pagine più visitate
 
-Puoi esportare in CSV per analisi più avanzate.
+**Top Sources**
+- Da dove arrivano i visitatori
+- Direct / Search / Social / Referral
+
+**Locations**
+- Paesi
+- Regioni
+
+**Devices**
+- Desktop vs Mobile vs Tablet
+- Browser
+- OS
+
+**Goals (Eventi personalizzati)**
+- Playlist View
+- Streaming Link Click
+
+### Report utili per il tuo portale
+
+- **Playlist più popolari**: Vai su Goals > Playlist View
+- **Piattaforme preferite**: Vai su Goals > Streaming Link Click > Breakdown by platform
+- **Quando visitano**: Guarda il grafico orario
+- **Mobile vs Desktop**: Devices section
 
 ---
 
 ## Manutenzione
 
+### Comandi Docker utili
+
+```bash
+# Vai nella directory di Plausible
+cd /var/www/hosting
+
+# Ferma tutto
+docker compose down
+
+# Avvia
+docker compose up -d
+
+# Riavvia
+docker compose restart
+
+# Vedi logs
+docker compose logs -f plausible
+
+# Vedi stato
+docker compose ps
+
+# Aggiorna Plausible
+docker compose down
+docker compose pull
+docker compose up -d
+```
+
 ### Backup Database
 
-PostgreSQL:
 ```bash
-pg_dump -U umami_user umami > umami_backup_$(date +%Y%m%d).sql
+# Backup PostgreSQL (analytics data)
+docker compose exec plausible_db pg_dump -U postgres plausible_db > backup_plausible_$(date +%Y%m%d).sql
+
+# Backup ClickHouse (events data)
+docker compose exec plausible_events_db clickhouse-client --query "BACKUP DATABASE plausible_events_db TO Disk('backups', 'backup_$(date +%Y%m%d).zip')"
 ```
 
-MySQL:
-```bash
-mysqldump -u umami_user -p umami > umami_backup_$(date +%Y%m%d).sql
-```
-
-### Update Umami
+### Restore Database
 
 ```bash
-cd /var/www/umami
-git pull
-npm install
-npm run build
-pm2 restart umami  # o sudo systemctl restart umami
+# Restore PostgreSQL
+cat backup_plausible_20251230.sql | docker compose exec -T plausible_db psql -U postgres plausible_db
 ```
 
-### Logs
+### Update Plausible
 
-Con PM2:
 ```bash
-pm2 logs umami
-pm2 logs umami --lines 100
+cd /var/www/hosting
+
+# Pull ultima versione
+docker compose down
+docker compose pull
+docker compose up -d
+
+# Verifica versione
+docker compose exec plausible sh -c 'cat /app/VERSION'
 ```
 
-Con systemd:
+### Logs e Troubleshooting
+
 ```bash
-sudo journalctl -u umami -f
+# Logs applicazione
+docker compose logs -f plausible
+
+# Logs database
+docker compose logs -f plausible_db
+
+# Logs ClickHouse
+docker compose logs -f plausible_events_db
+
+# Spazio occupato
+docker compose exec plausible_db psql -U postgres -c "SELECT pg_size_pretty(pg_database_size('plausible_db'));"
 ```
-
-### Performance
-
-Per grandi volumi di traffico:
-- Usa PostgreSQL (più performante di MySQL per analytics)
-- Considera Redis per caching
-- Abilita compressione Nginx/Apache
 
 ---
 
 ## Privacy e GDPR
 
-Umami è GDPR compliant di default:
+Plausible è GDPR compliant di default:
 
-✅ **Cosa fa:**
-- Non usa cookie
-- Non traccia identificatori personali
-- Salva solo dati aggregati
-- Hashing degli IP
+✅ **Non usa cookie** - Nessun cookie banner necessario!
+✅ **No dati personali** - Non traccia IP completi
+✅ **No cross-site tracking**
+✅ **Dati aggregati** - Solo statistiche anonime
+✅ **Open source** - Codice trasparente
 
-✅ **Cookie banner**: NON necessario!
+### Privacy Policy
 
-✅ **Privacy policy**: Menziona solo che usi analytics anonimizzati
+Puoi semplicemente menzionare:
+
+> "Questo sito usa Plausible Analytics, una soluzione privacy-friendly che non raccoglie dati personali e non usa cookie. Per maggiori informazioni: https://plausible.io/privacy-focused-web-analytics"
 
 ---
 
 ## Troubleshooting
 
-### Umami non si avvia
+### Plausible non si avvia
 
 ```bash
 # Controlla logs
-pm2 logs umami
+docker compose logs plausible
 
-# Verifica database connection
-cd /var/www/umami
-node -e "const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.$connect().then(() => console.log('DB OK')).catch(e => console.error('DB ERROR:', e));"
+# Verifica configurazione
+cat plausible-conf.env | grep -v "^#" | grep -v "^$"
+
+# Ricrea database
+docker compose down -v  # ATTENZIONE: Cancella i dati!
+docker compose up -d
 ```
 
 ### Script non carica nel frontend
 
-1. Verifica che Nginx/Apache proxy funzioni
+1. Verifica che Nginx/Apache proxy funzioni:
+   ```bash
+   curl -I https://stats.sixonesixo.com/js/script.js
+   ```
 2. Controlla CORS (dovrebbe essere OK di default)
-3. Verifica che lo script URL sia corretto
-4. Guarda console browser per errori
+3. Verifica in DevTools > Network
 
 ### Dati non vengono tracciati
 
 1. Apri DevTools > Network
-2. Cerca chiamate a `/api/send`
-3. Se mancano, verifica:
-   - Script caricato correttamente
-   - Website ID corretto
-   - Blocco da AdBlocker (usa `data-host-url` se necessario)
+2. Cerca chiamate a `/api/event`
+3. Se mancano:
+   - Verifica `data-domain` corretto
+   - Controlla che script sia caricato
+   - Verifica AdBlocker non blocchi
 
 ### AdBlocker blocca tracking
 
-Modifica lo script per usare proxy:
+Usa **Proxy script** (consigliato):
 
 ```html
-<script async 
-  src="https://stats.sixonesixo.com/script.js" 
-  data-website-id="IL-TUO-WEBSITE-ID"
-  data-host-url="https://stats.sixonesixo.com"
-  data-auto-track="true">
+<!-- Usa script proxy invece di script.js -->
+<script defer 
+  data-domain="sixonesixo.com" 
+  src="https://stats.sixonesixo.com/js/script.local.js">
 </script>
 ```
 
-Oppure usa path personalizzato in Nginx:
+Configura Nginx:
 
 ```nginx
-location /stats/ {
-    proxy_pass http://localhost:3000/;
+location = /js/script.local.js {
+    proxy_pass https://stats.sixonesixo.com/js/script.js;
+}
+
+location = /api/event {
+    proxy_pass https://stats.sixonesixo.com/api/event;
 }
 ```
-
-E poi:
-```html
-<script async src="/stats/script.js" data-website-id="..."></script>
-```
-
----
-
-## Alternative a Umami
-
-Se Umami non ti convince:
-
-1. **Plausible** - Più features, ma più pesante
-2. **Matomo** - Più completo, simile a Google Analytics
-3. **GoatCounter** - Ancora più semplice e leggero
-4. **Ackee** - Node.js, design minimalista
 
 ---
 
 ## Costi e Risorse
 
-### Requisiti server
+### Requisiti server Plausible
 
 Per traffico medio (< 100k page views/mese):
-- **RAM**: 512MB - 1GB
-- **CPU**: 1 core
-- **Disco**: 5GB (crescerà con i dati)
-- **Banda**: Minima (script è ~2KB)
+- **RAM**: 2GB minimo (consigliato 4GB)
+- **CPU**: 2 core
+- **Disco**: 10GB iniziale (crescerà con i dati)
+- **Banda**: Minima (script è ~1KB)
 
 ### Hosting consigliati
 
-Se vuoi server dedicato per Umami:
-- **Hetzner Cloud**: 4€/mese (CX11)
-- **DigitalOcean**: 6$/mese (Basic Droplet)
-- **Linode**: 5$/mese (Nanode)
-- **OVH**: 3-4€/mese (VPS Starter)
+- **Hetzner Cloud**: 7-10€/mese (CX21/CX31)
+- **DigitalOcean**: 12-18$/mese (2GB-4GB Droplet)
+- **Linode**: 12-24$/mese (4GB)
+- **OVH**: 8-12€/mese (VPS)
+
+**Nota**: Plausible ha bisogno di più risorse di Umami per via di ClickHouse (database per eventi).
+
+---
+
+## Alternative e Confronto
+
+### Plausible vs Umami vs GoatCounter
+
+| Feature | Plausible | Umami | GoatCounter |
+|---------|-----------|-------|-------------|
+| **UI** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
+| **Leggerezza** | ~1KB | ~2KB | <1KB |
+| **Setup** | Docker (facile) | npm (medio) | Binary (facile) |
+| **RAM** | 2-4GB | 512MB-1GB | 256MB |
+| **Eventi custom** | ✅ | ✅ | ⚠️ Limitati |
+| **Realtime** | ✅ | ✅ | ❌ |
+| **Multi-sites** | ✅ | ✅ | ✅ |
 
 ---
 
 ## Supporto
 
-- **Documentazione ufficiale**: https://umami.is/docs
-- **GitHub**: https://github.com/umami-software/umami
-- **Discord Community**: https://discord.gg/4dz4zcXYrQ
+- **Documentazione ufficiale**: https://plausible.io/docs
+- **Self-hosting guide**: https://plausible.io/docs/self-hosting
+- **GitHub**: https://github.com/plausible/analytics
+- **Forum**: https://github.com/plausible/analytics/discussions
 
 ---
 
 ## Checklist Completa
 
-- [ ] Node.js 18+ installato
-- [ ] PostgreSQL/MySQL configurato
-- [ ] Umami clonato e dipendenze installate
-- [ ] File .env configurato
-- [ ] Database inizializzato (`npx prisma migrate deploy`)
-- [ ] Umami avviato con PM2/systemd
-- [ ] Nginx/Apache configurato come reverse proxy
+- [ ] Docker installato sul server
+- [ ] Repository clonata in `/var/www/hosting`
+- [ ] File `plausible-conf.env` configurato
+- [ ] Secret key generata
+- [ ] Email admin configurata
+- [ ] `DISABLE_REGISTRATION=true` impostato
+- [ ] Docker containers avviati (`docker compose up -d`)
+- [ ] Nginx/Apache configurato per `stats.sixonesixo.com`
 - [ ] SSL attivo con Let's Encrypt
 - [ ] Primo accesso fatto e password cambiata
-- [ ] Website creato in Umami
-- [ ] Script tracking aggiunto in index.html
-- [ ] Script tracking aggiunto in playlist.html
-- [ ] Eventi personalizzati implementati
+- [ ] Sito aggiunto in Plausible (domain: `sixonesixo.com`)
+- [ ] Script tracking aggiornato in `index.html`
+- [ ] Script tracking aggiornato in `playlist.html`
+- [ ] Eventi personalizzati aggiornati in `app.js`
+- [ ] Goals configurati in Plausible dashboard
 - [ ] Test funzionamento in DevTools
-- [ ] Backup automatico configurato
+- [ ] Backup configurato
 
 ---
 
@@ -645,9 +618,10 @@ Se vuoi server dedicato per Umami:
 Dopo l'installazione:
 
 1. ✅ Monitora per qualche giorno
-2. 📊 Identifica playlist più popolari
-3. 🎵 Ottimizza contenuti in base ai dati
-4. 📈 Crea report mensili
-5. 🔄 Itera e migliora
+2. 📊 Identifica playlist più popolari  
+3. 🎵 Scopri piattaforme streaming preferite
+4. 📈 Analizza picchi di traffico
+5. 🌍 Vedi da dove arrivano i visitatori
+6. 🔄 Ottimizza contenuti in base ai dati
 
-Buon tracking! 🚀
+Buon tracking con Plausible! 🚀
