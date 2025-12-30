@@ -18,9 +18,9 @@ export const config = {
     clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
   },
   
-  // YouTube
+  // YouTube (API key no longer required - using scraper)
   youtube: {
-    apiKey: process.env.YOUTUBE_API_KEY,
+    apiKey: process.env.YOUTUBE_API_KEY, // Optional, kept for backward compatibility
   },
   
   // Paths
@@ -43,9 +43,10 @@ export function validateConfig() {
     errors.push('Missing SPOTIFY_CLIENT_SECRET in .env');
   }
   
-  if (!config.youtube.apiKey) {
-    errors.push('Missing YOUTUBE_API_KEY in .env');
-  }
+  // YOUTUBE_API_KEY no longer required (using scraper instead)
+  // if (!config.youtube.apiKey) {
+  //   errors.push('Missing YOUTUBE_API_KEY in .env');
+  // }
   
   if (!config.appleMusicJwt) {
     errors.push('Missing APPLE_MUSIC_JWT in .env');
