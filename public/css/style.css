@@ -400,15 +400,6 @@ body::before {
   z-index: 10;
 }
 
-  .hypercube-container {
-    font-size: 9px;
-  }
-
-  .welcome {
-    padding: 20px;
-  }
-}
-
 .welcome-text {
   text-align: center;
   color: var(--dim);
