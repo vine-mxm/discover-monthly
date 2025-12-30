@@ -105,6 +105,10 @@ function animateHypercube() {
   window.addEventListener('resize', updateDimensions);
   
   function drawHypercube() {
+    // Skip drawing if container is hidden or dimensions are invalid
+    if (!container || container.offsetParent === null || width <= 0 || height <= 0) {
+      return;
+    }
     
     // Rotate angle
     angle += 0.02;
@@ -141,7 +145,10 @@ function animateHypercube() {
       return [Math.round(x2D), Math.round(y2D)];
     });
     
-    // Create canvas
+    // Create canvas - validate dimensions first
+    if (width <= 0 || height <= 0 || !isFinite(width) || !isFinite(height)) {
+      return;
+    }
     const canvas = Array(height).fill().map(() => Array(width).fill(' '));
     
     // Draw edges
