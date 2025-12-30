@@ -82,69 +82,99 @@ export DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
 
 ## Installazione con Docker/Podman
 
-### Step 1: Scarica Plausible Hosting
+### Step 1: Scarica Plausible Community Edition
 
 ```bash
 # Vai nella directory delle applicazioni
 cd /var/www
 
-# Clona la repository di hosting
-git clone https://github.com/plausible/hosting
+# Clona la repository community-edition (v3.x)
+git clone https://github.com/plausible/community-edition hosting
 cd hosting
 ```
 
-### Step 2: Configura le variabili d'ambiente
+### Step 2: Crea e configura il file .env
 
 ```bash
-# Genera chiavi segrete
-openssl rand -base64 64 | tr -d '\n' ; echo
+# Crea il file .env
+touch .env
 
-# Copia il file di esempio
-cp plausible-conf.env.example plausible-conf.env
+# Genera la chiave segreta (deve essere almeno 48 byte)
+openssl rand -base64 48
 
-# Edita il file
-nano plausible-conf.env
+# Edita il file .env
+nano .env
 ```
 
-Configura nel file `plausible-conf.env`:
+**Configurazione minima richiesta in `.env`:**
 
 ```bash
-# Server
+# URL base del tuo sito Plausible
 BASE_URL=https://stats.sixonesixo.com
+
+# Chiave segreta (inserisci quella generata sopra)
 SECRET_KEY_BASE=<inserisci-la-chiave-generata-con-openssl>
+```
 
-# Database (non modificare se usi Docker)
-DATABASE_URL=postgres://postgres:postgres@plausible_db:5432/plausible_db
-CLICKHOUSE_DATABASE_URL=http://plausible_events_db:8123/plausible_events_db
+**Configurazione completa opzionale:**
 
-# Admin (per primo accesso)
-ADMIN_USER_EMAIL=tua-email@esempio.com
-ADMIN_USER_NAME=Admin
-ADMIN_USER_PWD=cambiami-dopo-primo-accesso
+```bash
+# === CONFIGURAZIONE BASE (OBBLIGATORIO) ===
+BASE_URL=https://stats.sixonesixo.com
+SECRET_KEY_BASE=<inserisci-la-chiave-generata>
 
-# Disabilita registrazioni pubbliche (importante!)
-DISABLE_REGISTRATION=true
+# === PORTE (OPZIONALE) ===
+# Se vuoi TLS automatico con Let's Encrypt, abilita queste porte:
+# HTTP_PORT=80
+# HTTPS_PORT=443
 
-# SMTP (opzionale - per email alerts)
+# Oppure se usi reverse proxy (nginx/apache):
+# Lascia commentato e usa porta 8000 (default)
+
+# === SMTP (OPZIONALE - per email alerts e password reset) ===
 # MAILER_EMAIL=noreply@stats.sixonesixo.com
 # SMTP_HOST_ADDR=smtp.tuo-provider.com
 # SMTP_HOST_PORT=587
 # SMTP_USER_NAME=tuo-username
 # SMTP_USER_PWD=tua-password
 # SMTP_HOST_SSL_ENABLED=true
+
+# === IP GEOLOCATION (OPZIONALE) ===
+# Per geolocalizzazione più accurata, registrati su https://maxmind.com
+# MAXMIND_LICENSE_KEY=your_license_key
+# MAXMIND_EDITION=GeoLite2-City
+
+# === GOOGLE SEARCH CONSOLE (OPZIONALE) ===
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
 ```
 
-### Step 3: Configura Docker Compose (opzionale)
+**Nota importante:** Plausible v3.x non richiede più configurazione di database o admin user nel `.env`. Il primo utente viene creato tramite interfaccia web dopo l'avvio.
 
-Il file `docker-compose.yml` di default va bene, ma puoi personalizzare le porte se necessario.
+### Step 3: Configura porte e reverse proxy
 
-Edita `docker-compose.yml` se vuoi cambiare la porta (default 8000):
+**Opzione A: Con reverse proxy Nginx/Apache (Consigliato)**
 
-```yaml
+Lascia il `.env` senza HTTP_PORT/HTTPS_PORT. Plausible userà porta 8000 di default.
+Configura Nginx/Apache come reverse proxy (vedi sezione successiva).
+
+**Opzione B: Esposizione diretta con TLS automatico**
+
+Se vuoi che Plausible gestisca direttamente TLS con Let's Encrypt:
+
+```bash
+# Aggiungi al .env
+echo "HTTP_PORT=80" >> .env
+echo "HTTPS_PORT=443" >> .env
+
+# Crea compose.override.yml
+cat > compose.override.yml << EOF
 services:
   plausible:
     ports:
-      - 8000:8000  # Cambia se la porta 8000 è occupata
+      - 80:80
+      - 443:443
+EOF
 ```
 
 ### Step 3b: (Solo Podman) Verifica compatibilità
@@ -204,6 +234,8 @@ docker-compose up -d
 docker-compose ps
 docker-compose logs -f plausible
 ```
+
+**Nota:** Il file compose si chiama `compose.yml` (non docker-compose.yml). Docker/Podman lo rilevano automaticamente.
 
 Dovresti vedere qualcosa come:
 ```
@@ -304,14 +336,30 @@ sudo certbot --nginx -d stats.sixonesixo.com  # Per Nginx
 ## Primo Accesso
 
 1. Apri il browser e vai su `https://stats.sixonesixo.com`
-2. Login con le credenziali che hai messo in `plausible-conf.env`:
-   - Email: `tua-email@esempio.com`
-   - Password: `cambiami-dopo-primo-accesso`
-3. **IMPORTANTE**: Cambia subito la password!
+2. **Registra il primo utente** - Plausible v3.x ti chiederà di creare un account
+   - Inserisci Nome, Email e Password
+   - Questo sarà l'account amministratore
+3. Conferma l'email (se hai configurato SMTP) oppure procedi direttamente
+
+**Nota:** Il primo utente registrato diventa automaticamente amministratore. Gli utenti successivi non potranno registrarsi a meno che non abiliti `DISABLE_REGISTRATION=false` nel `.env`.
+
+### Disabilita registrazioni pubbliche (Importante!)
+
+Dopo aver creato il tuo account, disabilita le registrazioni pubbliche:
+
+```bash
+# Aggiungi al file .env
+echo "DISABLE_REGISTRATION=true" >> .env
+
+# Riavvia Plausible
+cd /var/www/hosting
+docker compose restart plausible
+# oppure: podman-compose restart plausible
+```
 
 ### Aggiungi il tuo sito
 
-1. Clicca su **"+ Add website"**
+1. Dopo il login, clicca su **"+ Add website"**
 2. **Domain**: `sixonesixo.com` (senza http/https)
 3. **Timezone**: Scegli il tuo timezone
 4. Clicca **"Add snippet"**
@@ -755,21 +803,21 @@ Per traffico medio (< 100k page views/mese):
 ## Checklist Completa
 
 - [ ] Docker/Podman installato sul server
-- [ ] Repository clonata in `/var/www/hosting`
-- [ ] File `plausible-conf.env` configurato
-- [ ] Secret key generata
-- [ ] Email admin configurata
-- [ ] `DISABLE_REGISTRATION=true` impostato
-- [ ] (Podman) Socket attivo e DOCKER_HOST esportato
+- [ ] Repository `community-edition` clonata in `/var/www/hosting`
+- [ ] File `.env` creato e configurato
+- [ ] `BASE_URL` impostato correttamente
+- [ ] `SECRET_KEY_BASE` generato (almeno 48 byte)
+- [ ] (Podman) Socket attivo e DOCKER_HOST esportato se necessario
 - [ ] Containers avviati (`docker compose up -d` o `podman-compose up -d`)
 - [ ] Nginx/Apache configurato per `stats.sixonesixo.com`
 - [ ] SSL attivo con Let's Encrypt
-- [ ] Primo accesso fatto e password cambiata
+- [ ] Primo utente registrato via web interface
+- [ ] `DISABLE_REGISTRATION=true` aggiunto a `.env` e riavviato
 - [ ] Sito aggiunto in Plausible (domain: `sixonesixo.com`)
-- [ ] Script tracking aggiornato in `index.html`
-- [ ] Script tracking aggiornato in `playlist.html`
-- [ ] Eventi personalizzati aggiornati in `app.js`
-- [ ] Goals configurati in Plausible dashboard
+- [ ] Script tracking già presente in `index.html` ✅
+- [ ] Script tracking già presente in `playlist.html` ✅
+- [ ] Eventi personalizzati già implementati in `app.js` ✅
+- [ ] Goals configurati in Plausible dashboard (`Playlist View`, `Streaming Link Click`)
 - [ ] Test funzionamento in DevTools
 - [ ] Backup configurato
 
