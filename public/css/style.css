@@ -576,7 +576,7 @@ body::before {
   background: var(--bg);
   border: 1px dashed var(--border);
   padding: 20px 30px;
-  max-width: 500px;
+  max-width: 300px;
   width: 90%;
   text-align: center;
   color: var(--fg);
