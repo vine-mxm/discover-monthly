@@ -31,11 +31,11 @@ Guida completa per installare e configurare Plausible Analytics sul server remot
 ## Prerequisiti
 
 Sul tuo server remoto dovrai avere:
-- Docker + Docker Compose
+- **Docker + Docker Compose** OPPURE **Podman + Podman Compose**
 - Nginx o Apache (per reverse proxy)
 - Dominio configurato (`stats.sixonesixo.com`)
 
-### Installa Docker
+### Opzione A: Installa Docker
 
 Se non hai Docker installato:
 
@@ -52,9 +52,35 @@ docker --version
 docker compose version
 ```
 
+### Opzione B: Installa Podman (Consigliato per sicurezza)
+
+Se preferisci Podman (rootless, più sicuro):
+
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y podman podman-compose
+
+# Verifica installazione
+podman --version
+podman-compose --version
+
+# (Opzionale) Abilita socket compatibilità Docker
+systemctl --user enable --now podman.socket
+export DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
+
+# Oppure system-wide (come root)
+# sudo systemctl enable --now podman.socket
+# export DOCKER_HOST=unix:///run/podman/podman.sock
+```
+
+**Nota per Podman:** Tutti i comandi `docker` e `docker-compose` funzionano con Podman. Basta sostituire:
+- `docker` → `podman`
+- `docker-compose` → `podman-compose` (o usa `docker-compose` con socket Podman)
+
 ---
 
-## Installazione con Docker
+## Installazione con Docker/Podman
 
 ### Step 1: Scarica Plausible Hosting
 
@@ -121,12 +147,30 @@ services:
       - 8000:8000  # Cambia se la porta 8000 è occupata
 ```
 
+### Step 3b: (Solo Podman) Verifica compatibilità
+
+Se usi Podman, assicurati che il socket sia attivo:
+
+```bash
+# Verifica socket Podman
+systemctl --user status podman.socket
+
+# Se non attivo, avvialo
+systemctl --user enable --now podman.socket
+
+# Esporta DOCKER_HOST per usare docker-compose
+export DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
+
+# Verifica che docker-compose veda Podman
+docker-compose version
+```
+
 ### Step 4: Avvia Plausible
+
+**Con Docker:**
 
 ```bash
 # Nella directory /var/www/hosting
-
-# Avvia i container
 docker compose up -d
 
 # Verifica che tutto funzioni
@@ -134,6 +178,31 @@ docker compose ps
 
 # Vedi i logs
 docker compose logs -f plausible
+```
+
+**Con Podman (Opzione 1 - podman-compose):**
+
+```bash
+# Nella directory /var/www/hosting
+podman-compose up -d
+
+# Verifica
+podman-compose ps
+
+# Logs
+podman-compose logs -f plausible
+```
+
+**Con Podman (Opzione 2 - docker-compose via socket):**
+
+```bash
+# Assicurati che DOCKER_HOST sia impostato
+export DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
+
+# Usa docker-compose normalmente
+docker-compose up -d
+docker-compose ps
+docker-compose logs -f plausible
 ```
 
 Dovresti vedere qualcosa come:
@@ -391,7 +460,9 @@ Plausible traccia automaticamente:
 
 ## Manutenzione
 
-### Comandi Docker utili
+### Comandi Docker/Podman utili
+
+**Con Docker:**
 
 ```bash
 # Vai nella directory di Plausible
@@ -416,6 +487,39 @@ docker compose ps
 docker compose down
 docker compose pull
 docker compose up -d
+```
+
+**Con Podman:**
+
+```bash
+cd /var/www/hosting
+
+# Ferma tutto
+podman-compose down
+# oppure: docker-compose down (con socket Podman)
+
+# Avvia
+podman-compose up -d
+
+# Riavvia
+podman-compose restart
+
+# Vedi logs
+podman-compose logs -f plausible
+
+# Vedi stato
+podman-compose ps
+
+# Lista containers
+podman ps
+
+# Entra in un container
+podman exec -it hosting_plausible_1 sh
+
+# Aggiorna Plausible
+podman-compose down
+podman-compose pull
+podman-compose up -d
 ```
 
 ### Backup Database
@@ -543,6 +647,63 @@ location = /api/event {
 }
 ```
 
+### Troubleshooting Podman
+
+#### podman-compose non funziona
+
+```bash
+# Usa docker-compose con socket Podman invece
+export DOCKER_HOST=unix:///run/user/$UID/podman/podman.sock
+docker-compose up -d
+```
+
+#### Permessi volumi
+
+```bash
+# Se hai problemi con permessi, usa Podman come root
+sudo podman-compose up -d
+
+# Oppure sistema permessi SELinux
+sudo setsebool -P container_manage_cgroup on
+```
+
+#### Network non raggiungibile tra containers
+
+```bash
+# Ricrea network
+podman network rm hosting_default
+podman-compose up -d
+
+# Verifica networks
+podman network ls
+podman network inspect hosting_default
+```
+
+#### Container non si avvia
+
+```bash
+# Vedi logs dettagliati
+podman logs hosting_plausible_1
+
+# Rimuovi tutti i container e ricomincia
+podman-compose down -v
+podman-compose up -d
+```
+
+#### Volumi Podman
+
+I volumi Podman sono salvati in:
+- **Rootless**: `~/.local/share/containers/storage/volumes/`
+- **Root**: `/var/lib/containers/storage/volumes/`
+
+```bash
+# Lista volumi
+podman volume ls
+
+# Inspect volume
+podman volume inspect hosting_plausible-db-data
+```
+
 ---
 
 ## Costi e Risorse
@@ -593,13 +754,14 @@ Per traffico medio (< 100k page views/mese):
 
 ## Checklist Completa
 
-- [ ] Docker installato sul server
+- [ ] Docker/Podman installato sul server
 - [ ] Repository clonata in `/var/www/hosting`
 - [ ] File `plausible-conf.env` configurato
 - [ ] Secret key generata
 - [ ] Email admin configurata
 - [ ] `DISABLE_REGISTRATION=true` impostato
-- [ ] Docker containers avviati (`docker compose up -d`)
+- [ ] (Podman) Socket attivo e DOCKER_HOST esportato
+- [ ] Containers avviati (`docker compose up -d` o `podman-compose up -d`)
 - [ ] Nginx/Apache configurato per `stats.sixonesixo.com`
 - [ ] SSL attivo con Let's Encrypt
 - [ ] Primo accesso fatto e password cambiata
