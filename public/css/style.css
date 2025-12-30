@@ -627,6 +627,7 @@ body::before {
 .modal-btn:hover {
   background: var(--fg);
   color: var(--bg);
+  border: 1px solid var(--fg);
 }
 
 .modal-btn:active {
