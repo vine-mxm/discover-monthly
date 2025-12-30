@@ -17,11 +17,10 @@ function initEthicalModal() {
     localStorage.setItem(MODAL_STORAGE_KEY, Date.now().toString());
   });
   
-  // Close modal on overlay click
+  // Close modal on overlay click (without saving to localStorage)
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.classList.remove('active');
-      localStorage.setItem(MODAL_STORAGE_KEY, Date.now().toString());
     }
   });
 }
