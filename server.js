@@ -45,8 +45,12 @@ app.get('/api/playlists', (req, res) => {
   res.sendFile(path.join(__dirname, 'data', 'playlists.json'));
 });
 
-// Fallback to index.html for SPA routing
-app.get('*', (req, res) => {
+// Fallback to index.html ONLY for HTML routes (not for static files)
+app.get('*', (req, res, next) => {
+  // Don't catch static file requests
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    return next();
+  }
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
