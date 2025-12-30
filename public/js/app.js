@@ -46,6 +46,19 @@ function showEthicalModal() {
 }
 
 function handleStreamingLinkClick(e, platform) {
+  // Track streaming link click with Umami
+  if (window.umami) {
+    const trackElement = e.currentTarget.closest('.track');
+    const trackTitle = trackElement?.querySelector('.track-title')?.textContent || 'Unknown';
+    const trackArtist = trackElement?.querySelector('.track-artist')?.textContent || 'Unknown';
+    
+    window.umami.track('streaming-link-click', {
+      platform: platform,
+      artist: trackArtist,
+      track: trackTitle
+    });
+  }
+  
   // Don't show modal for Bandcamp clicks
   if (platform === 'bandcamp') {
     return;
@@ -386,6 +399,16 @@ function populatePlaylistMenu(playlists) {
       menu.querySelectorAll('.playlist-item').forEach(i => i.classList.remove('active'));
       this.classList.add('active');
       const playlist = JSON.parse(this.dataset.playlist);
+      
+      // Track playlist view with Umami
+      if (window.umami) {
+        window.umami.track('playlist-view', {
+          playlist: playlist.name,
+          tracks: playlist.tracks.length,
+          year: playlist.year
+        });
+      }
+      
       displayPlaylistContent(playlist);
     });
   });
@@ -473,6 +496,16 @@ function populateMobilePlaylistMenu(playlists) {
       menu.querySelectorAll('.playlist-item').forEach(i => i.classList.remove('active'));
       this.classList.add('active');
       const playlist = JSON.parse(this.dataset.playlist);
+      
+      // Track playlist view with Umami
+      if (window.umami) {
+        window.umami.track('playlist-view', {
+          playlist: playlist.name,
+          tracks: playlist.tracks.length,
+          year: playlist.year
+        });
+      }
+      
       displayPlaylistContent(playlist);
       
       // Close mobile menu after selection
